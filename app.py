@@ -49,6 +49,8 @@ def create_app():
             return {'current_user': user}
         return {'current_user': None}
 
+    app.jinja_env.filters['enumerate'] = enumerate
+
     with app.app_context():
         db.create_all()
 

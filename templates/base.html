@@ -17,18 +17,42 @@
             </a>
             <div class="nav-links">
                 {% if current_user %}
-                    <a href="{{ url_for('main.dashboard') }}">Dashboard</a>
-                    <a href="{{ url_for('expenses.list_expenses') }}">Expenses</a>
-                    <a href="{{ url_for('expenses.add_expense') }}">Add expense</a>
-                    <div class="nav-avatar-wrap">
-                        <a href="{{ url_for('auth.profile') }}" class="nav-avatar" title="Profile">
-                            {% if current_user.avatar_url %}
-                                <img src="{{ current_user.avatar_url }}" alt="{{ current_user.name }}" class="nav-avatar-img">
-                            {% else %}
-                                <span class="nav-avatar-initials">{{ current_user.name[0].upper() }}</span>
-                            {% endif %}
-                        </a>
+                    {% set ep = request.endpoint %}
+                    <a href="{{ url_for('main.dashboard') }}"
+                       class="nav-link {% if ep == 'main.dashboard' %}nav-link--active{% endif %}">Dashboard</a>
+                    <a href="{{ url_for('expenses.list_expenses') }}"
+                       class="nav-link {% if ep == 'expenses.list_expenses' %}nav-link--active{% endif %}">Expenses</a>
+                    <!-- <a href="{{ url_for('expenses.add_expense') }}"
+                       class="nav-link {% if ep == 'expenses.add_expense' or ep == 'expenses.edit_expense' %}nav-link--active{% endif %}">Add Expense</a> -->
+
+                    <!-- Three-dot profile menu -->
+                    <div class="nav-dots-wrap" id="navDotsWrap">
+                        <button class="nav-dots-btn" id="navDotsBtn" type="button" aria-label="More options">
+                            <svg width="18" height="18" viewBox="0 0 18 18" fill="currentColor">
+                                <circle cx="9" cy="4"  r="1.5"/>
+                                <circle cx="9" cy="9"  r="1.5"/>
+                                <circle cx="9" cy="14" r="1.5"/>
+                            </svg>
+                        </button>
+                        <div class="nav-dots-panel" id="navDotsPanel">
+                            <a href="{{ url_for('auth.profile') }}" class="nav-dots-item">
+                                <div class="nav-dots-avatar">
+                                    {% if current_user.avatar_url %}
+                                        <img src="{{ current_user.avatar_url }}" alt="{{ current_user.name }}">
+                                    {% else %}
+                                        <span>{{ current_user.name[0].upper() }}</span>
+                                    {% endif %}
+                                </div>
+                                <div class="nav-dots-info">
+                                    <p class="nav-dots-name">{{ current_user.name }}</p>
+                                    <p class="nav-dots-email">{{ current_user.email }}</p>
+                                </div>
+                            </a>
+                            <div class="nav-dots-divider"></div>
+                            <a href="{{ url_for('auth.profile') }}" class="nav-dots-link">Profile settings</a>
+                        </div>
                     </div>
+
                     <a href="{{ url_for('auth.logout') }}" class="nav-cta">Sign out</a>
                 {% else %}
                     <a href="{{ url_for('auth.login') }}">Sign in</a>
@@ -66,6 +90,20 @@
     </footer>
 
     <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+    <script>
+        // Three-dot menu toggle
+        const dotsBtn   = document.getElementById('navDotsBtn');
+        const dotsPanel = document.getElementById('navDotsPanel');
+        const dotsWrap  = document.getElementById('navDotsWrap');
+        if (dotsBtn) {
+            dotsBtn.addEventListener('click', e => {
+                e.stopPropagation();
+                dotsWrap.classList.toggle('nav-dots--open');
+            });
+            document.addEventListener('click', () => dotsWrap.classList.remove('nav-dots--open'));
+            dotsPanel.addEventListener('click', e => e.stopPropagation());
+        }
+    </script>
     {% block scripts %}{% endblock %}
 </body>
 </html>

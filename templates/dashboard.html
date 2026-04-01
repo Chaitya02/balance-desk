@@ -32,16 +32,72 @@
             </div>
         </div>
 
-        {% if transactions == 0 %}
-        <div class="dashboard-empty">
-            <div class="empty-icon">◎</div>
-            <h2 class="empty-title">No expenses yet</h2>
-            <p class="empty-body">Start tracking by adding your first expense.</p>
-            <a href="{{ url_for('expenses.add_expense') }}" class="btn-primary">Add your first expense</a>
+        <!-- This month's expenses -->
+        {% if month_expenses %}
+        <div class="dashboard-section-header">
+            <h2 class="dashboard-section-title">{{ month_name }} {{ year }}</h2>
+            <a href="{{ url_for('expenses.list_expenses') }}" class="dashboard-section-link">View full breakdown &rarr;</a>
+        </div>
+
+        <div class="sheet-wrap">
+            <table class="sheet">
+                <thead>
+                    <tr>
+                        <th class="col-date">Date</th>
+                        <th class="col-title">Title</th>
+                        <th class="col-cat">Category</th>
+                        <th class="col-mode">Mode</th>
+                        <th class="col-amount">Amount</th>
+                        <th class="col-context">Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for e in month_expenses %}
+                    <tr class="sheet-row">
+                        <td class="col-date cell-date">{{ e.date.strftime('%b %d') }}</td>
+                        <td class="col-title">
+                            <span class="cell-bold">{{ e.title }}</span>
+                            {% if e.description %}
+                            <span class="cell-desc">{{ e.description }}</span>
+                            {% endif %}
+                        </td>
+                        <td class="col-cat">
+                            <span class="cat-dot cat-dot--{{ e.category | lower | replace(' ', '-') | replace('/', '-') }}"></span>
+                            {{ e.category }}
+                        </td>
+                        <td class="col-mode">
+                            <span class="mode-badge">{{ e.mode or '—' }}</span>
+                        </td>
+                        <td class="col-amount cell-num">${{ "%.2f"|format(e.amount) }}</td>
+                        <td class="col-context">
+                            {% if e.split and e.split > 0 %}
+                                {% if e.mode.upper() == 'FRIEND' %}
+                                <span class="pill pill--owe">You owe</span>
+                                {% else %}
+                                <span class="pill pill--owed">Friend owes</span>
+                                {% endif %}
+                            {% else %}
+                            <span class="cell-muted">—</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+                <tfoot>
+                    <tr class="sheet-footer">
+                        <td colspan="4" class="footer-label">{{ month_expenses|length }} expense{{ 's' if month_expenses|length != 1 }}</td>
+                        <td class="col-amount cell-num footer-total">${{ "%.2f"|format(month_expenses|sum(attribute='amount')) }}</td>
+                        <td></td>
+                    </tr>
+                </tfoot>
+            </table>
         </div>
         {% else %}
-        <div class="dashboard-actions">
-            <a href="{{ url_for('expenses.list_expenses') }}" class="btn-ghost">View all expenses &rarr;</a>
+        <div class="dashboard-empty">
+            <div class="empty-icon">◎</div>
+            <h2 class="empty-title">No expenses yet this month</h2>
+            <p class="empty-body">Start tracking by adding your first expense.</p>
+            <a href="{{ url_for('expenses.add_expense') }}" class="btn-primary">Add your first expense</a>
         </div>
         {% endif %}
 

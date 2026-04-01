@@ -10,7 +10,7 @@
         <div class="form-page-header">
             <div>
                 <p class="form-page-breadcrumb">
-                    <a href="{{ url_for('expenses.list_expenses') }}">Expenses</a> /
+                    <a href="{{ url_for('expenses.list_expenses') }}">Expenses</a> / Add Expense
                 </p>
                 <h1 class="form-page-title">Add Expense</h1>
             </div>
@@ -20,91 +20,123 @@
         <div class="auth-error" style="margin-bottom:1.5rem;">{{ error }}</div>
         {% endif %}
 
-        <form method="POST" action="{{ url_for('expenses.add_expense') }}" class="expense-form">
+        <div class="expense-form-card">
+            <form method="POST" action="{{ url_for('expenses.add_expense') }}" class="expense-form" id="expense-form">
 
-            <div class="expense-form-grid">
+                <div class="expense-form-grid">
 
-                <!-- Row 1 -->
-                <div class="form-group">
-                    <label for="date">Date <span class="req">*</span></label>
-                    <input type="date" id="date" name="date" class="form-input"
-                           value="{{ form.get('date', today) }}" required>
+                    <!-- Date -->
+                    <div class="form-group">
+                        <label for="date">Date <span class="req">*</span></label>
+                        <input type="date" id="date" name="date" class="form-input"
+                               value="{{ form.get('date', today) }}" required>
+                    </div>
+
+                    <!-- Title -->
+                    <div class="form-group">
+                        <label for="title">Title <span class="req">*</span></label>
+                        <input type="text" id="title" name="title" class="form-input"
+                               placeholder="e.g. Starbucks, Walmart"
+                               value="{{ form.get('title', '') }}" required autofocus>
+                    </div>
+
+                    <!-- Description -->
+                    <div class="form-group form-group--full">
+                        <label for="description">Description</label>
+                        <input type="text" id="description" name="description" class="form-input"
+                               placeholder="Optional note"
+                               value="{{ form.get('description', '') }}">
+                    </div>
+
+                    <!-- Category custom dropdown -->
+                    <div class="form-group">
+                        <label>Category <span class="req">*</span></label>
+                        <input type="hidden" id="category" name="category" value="{{ form.get('category', '') }}" required>
+                        <div class="cselect" id="cat-cselect">
+                            <button type="button" class="cselect-trigger" onclick="cselectToggle('cat-cselect')">
+                                <span class="cselect-preview">
+                                    <span class="cselect-preview-icon" id="cat-preview-icon"></span>
+                                    <span class="cselect-preview-text" id="cat-preview-text">Select or type new...</span>
+                                </span>
+                                <svg class="cselect-chevron" width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M4 6l4 4 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                            </button>
+                            <div class="cselect-panel">
+                                <input type="text" class="cselect-search" placeholder="Search or type new..."
+                                       oninput="cselectFilter('cat-cselect', this.value)"
+                                       onkeydown="cselectKeydown(event, 'cat-cselect', 'category')">
+                                <ul class="cselect-list" id="cat-cselect-list">
+                                    {% for c in categories %}
+                                    <li class="cselect-option" data-value="{{ c }}"
+                                        onclick="cselectPick('cat-cselect', 'category', '{{ c }}')">
+                                        <span class="cselect-option-icon" data-label="{{ c }}"></span>
+                                        <span class="cselect-option-label">{{ c }}</span>
+                                        <svg class="cselect-option-check" width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M2.5 7l3 3 6-6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                                    </li>
+                                    {% endfor %}
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Mode custom dropdown -->
+                    <div class="form-group">
+                        <label>Mode</label>
+                        <input type="hidden" id="mode" name="mode" value="{{ form.get('mode', '') }}">
+                        <div class="cselect" id="mode-cselect">
+                            <button type="button" class="cselect-trigger" onclick="cselectToggle('mode-cselect')">
+                                <span class="cselect-preview">
+                                    <span class="cselect-preview-text" id="mode-preview-text">Select or type new...</span>
+                                </span>
+                                <svg class="cselect-chevron" width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M4 6l4 4 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                            </button>
+                            <div class="cselect-panel">
+                                <input type="text" class="cselect-search" placeholder="Search or type new..."
+                                       oninput="cselectFilter('mode-cselect', this.value)"
+                                       onkeydown="cselectKeydown(event, 'mode-cselect', 'mode')">
+                                <ul class="cselect-list" id="mode-cselect-list">
+                                    {% for m in modes %}
+                                    <li class="cselect-option" data-value="{{ m }}"
+                                        onclick="cselectPick('mode-cselect', 'mode', '{{ m }}')">
+                                        <span class="cselect-option-label">{{ m }}</span>
+                                        <svg class="cselect-option-check" width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M2.5 7l3 3 6-6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                                    </li>
+                                    {% endfor %}
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Amount -->
+                    <div class="form-group">
+                        <label for="amount">Amount ($) <span class="req">*</span></label>
+                        <input type="number" id="amount" name="amount" class="form-input"
+                               min="0.01" step="0.01" placeholder="0.00"
+                               value="{{ form.get('amount', '') }}" required>
+                    </div>
+
+                    <!-- Split -->
+                    <div class="form-group">
+                        <label for="split">
+                            Split ($)
+                            <span class="split-hint" id="split-hint">—</span>
+                        </label>
+                        <input type="number" id="split" name="split" class="form-input"
+                               min="0" step="0.01" placeholder="0.00"
+                               value="{{ form.get('split', '') }}">
+                    </div>
+
                 </div>
 
-                <div class="form-group">
-                    <label for="title">Title <span class="req">*</span></label>
-                    <input type="text" id="title" name="title" class="form-input"
-                           placeholder="e.g. Starbucks, Walmart"
-                           value="{{ form.get('title', '') }}" required autofocus>
+                <div class="expense-form-actions">
+                    <a href="{{ url_for('expenses.list_expenses') }}" class="btn-ghost">Cancel</a>
+                    <div class="expense-form-submit-group">
+                        <button type="submit" name="next" value="list" class="btn-primary">Save expense</button>
+                        <button type="submit" name="next" value="add"  class="btn-ghost">Save &amp; add another</button>
+                    </div>
                 </div>
 
-                <div class="form-group form-group--full">
-                    <label for="description">Description</label>
-                    <input type="text" id="description" name="description" class="form-input"
-                           placeholder="Optional note"
-                           value="{{ form.get('description', '') }}">
-                </div>
-
-                <!-- Row 2 -->
-                <div class="form-group">
-                    <label for="category">Category <span class="req">*</span></label>
-                    <input type="text" id="category" name="category" class="form-input"
-                           list="category-options"
-                           placeholder="Select or type new…"
-                           value="{{ form.get('category', '') }}" required>
-                    <datalist id="category-options">
-                        {% for c in categories %}
-                        <option value="{{ c }}">
-                        {% endfor %}
-                    </datalist>
-                </div>
-
-                <div class="form-group">
-                    <label for="mode">Mode</label>
-                    <input type="text" id="mode" name="mode" class="form-input"
-                           list="mode-options"
-                           placeholder="Select or type new…"
-                           value="{{ form.get('mode', '') }}">
-                    <datalist id="mode-options">
-                        {% for m in modes %}
-                        <option value="{{ m }}">
-                        {% endfor %}
-                    </datalist>
-                </div>
-
-                <!-- Row 3 -->
-                <div class="form-group">
-                    <label for="amount">Amount ($) <span class="req">*</span></label>
-                    <input type="number" id="amount" name="amount" class="form-input"
-                           min="0.01" step="0.01" placeholder="0.00"
-                           value="{{ form.get('amount', '') }}" required>
-                </div>
-
-                <div class="form-group">
-                    <label for="split">
-                        Split ($)
-                        <span class="split-hint" id="split-hint">—</span>
-                    </label>
-                    <input type="number" id="split" name="split" class="form-input"
-                           min="0" step="0.01" placeholder="0.00"
-                           value="{{ form.get('split', '') }}">
-                </div>
-
-            </div>
-
-            <div class="expense-form-actions">
-                <a href="{{ url_for('expenses.list_expenses') }}" class="btn-ghost">Cancel</a>
-                <div class="expense-form-submit-group">
-                    <button type="submit" name="next" value="list" class="btn-primary">
-                        Save expense
-                    </button>
-                    <button type="submit" name="next" value="add" class="btn-ghost">
-                        Save &amp; add another
-                    </button>
-                </div>
-            </div>
-
-        </form>
+            </form>
+        </div>
 
     </div>
 </section>
@@ -113,24 +145,108 @@
 
 {% block scripts %}
 <script>
-    const modeInput  = document.getElementById('mode');
-    const splitHint  = document.getElementById('split-hint');
+// ---- Category icons ----
+const CAT_ICONS = {
+    'Bills': `<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M10 1.5H4.5A1.5 1.5 0 0 0 3 3v10a1.5 1.5 0 0 0 1.5 1.5h7A1.5 1.5 0 0 0 13 13V5l-3-3.5z"/><path d="M10 1.5V5H13M6 8.5h4M6 11h2.5"/></svg>`,
+    'Eating Out': `<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"><path d="M5 1v5a2 2 0 0 0 4 0V1M7 7v8M11 1c0 2.5 2 3.5 2 5.5 0 1.5-1 2.5-2 2.5v6"/></svg>`,
+    'Grocery': `<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M1.5 2.5H3l2 7h6.5l1.5-5H5.5"/><circle cx="6" cy="13" r="1"/><circle cx="10" cy="13" r="1"/></svg>`,
+    'Shopping': `<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5.5 6V4.5a2.5 2.5 0 0 1 5 0V6"/><path d="M2.5 6h11l-1 8h-9l-1-8z"/></svg>`,
+    'Travel': `<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M14 8.5L2 3l2.5 5.5L2 14l12-5.5z"/><path d="M4.5 8.5h7"/></svg>`,
+    'Entertainment': `<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="8" r="6"/><path d="M6.5 5.5l4 2.5-4 2.5V5.5z" fill="currentColor" stroke="none"/></svg>`,
+    'Transport': `<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="12" height="9" rx="2"/><path d="M5 12v1.5M11 12v1.5M2 7h12"/></svg>`,
+};
+const DEFAULT_ICON = `<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"><path d="M2 5h12M2 8h8M2 11h5"/></svg>`;
 
-    function updateSplitHint() {
-        const val = modeInput.value.trim().toUpperCase();
-        if (val === 'FRIEND') {
-            splitHint.textContent = 'you owe';
-            splitHint.className = 'split-hint split-hint--owe';
-        } else if (val) {
-            splitHint.textContent = 'friend owes you';
-            splitHint.className = 'split-hint split-hint--owed';
-        } else {
-            splitHint.textContent = '—';
-            splitHint.className = 'split-hint';
-        }
+function catIcon(label) { return CAT_ICONS[label] || DEFAULT_ICON; }
+
+// Inject icons into all option icon spans
+document.querySelectorAll('.cselect-option-icon[data-label]').forEach(el => {
+    el.innerHTML = catIcon(el.dataset.label);
+});
+
+// ---- CSelect helpers ----
+function cselectToggle(id) {
+    const el = document.getElementById(id);
+    const isOpen = el.classList.contains('cselect--open');
+    // Close all
+    document.querySelectorAll('.cselect--open').forEach(e => e.classList.remove('cselect--open'));
+    if (!isOpen) {
+        el.classList.add('cselect--open');
+        el.querySelector('.cselect-search').focus();
     }
+}
 
-    modeInput.addEventListener('input', updateSplitHint);
-    updateSplitHint();
+function cselectFilter(id, q) {
+    document.querySelectorAll(`#${id} .cselect-option`).forEach(opt => {
+        opt.style.display = opt.dataset.value.toLowerCase().includes(q.toLowerCase()) ? '' : 'none';
+    });
+}
+
+function cselectKeydown(e, selectId, inputId) {
+    if (e.key === 'Enter') {
+        e.preventDefault();
+        const val = e.target.value.trim();
+        if (val) cselectPick(selectId, inputId, val);
+    }
+    if (e.key === 'Escape') {
+        document.getElementById(selectId).classList.remove('cselect--open');
+    }
+}
+
+function cselectPick(selectId, inputId, value) {
+    const hidden = document.getElementById(inputId);
+    hidden.value = value;
+
+    // Update preview text
+    const previewText = document.querySelector(`#${selectId} .cselect-preview-text`);
+    previewText.textContent = value;
+    previewText.classList.add('cselect-preview-text--filled');
+
+    // Update preview icon (category only)
+    const previewIcon = document.querySelector(`#${selectId} .cselect-preview-icon`);
+    if (previewIcon) previewIcon.innerHTML = catIcon(value);
+
+    // Update check marks
+    document.querySelectorAll(`#${selectId} .cselect-option`).forEach(opt => {
+        opt.classList.toggle('cselect-option--selected', opt.dataset.value === value);
+    });
+
+    // Reset search + close
+    const search = document.querySelector(`#${selectId} .cselect-search`);
+    search.value = '';
+    cselectFilter(selectId, '');
+    document.getElementById(selectId).classList.remove('cselect--open');
+
+    // Trigger split hint if mode changed
+    if (inputId === 'mode') updateSplitHint();
+}
+
+// Close on outside click
+document.addEventListener('click', () => {
+    document.querySelectorAll('.cselect--open').forEach(e => e.classList.remove('cselect--open'));
+});
+document.querySelectorAll('.cselect').forEach(el => el.addEventListener('click', e => e.stopPropagation()));
+
+// ---- Split hint ----
+function updateSplitHint() {
+    const val = (document.getElementById('mode').value || '').trim().toUpperCase();
+    const hint = document.getElementById('split-hint');
+    if (!hint) return;
+    if (val === 'FRIEND') {
+        hint.textContent = 'you owe'; hint.className = 'split-hint split-hint--owe';
+    } else if (val) {
+        hint.textContent = 'friend owes you'; hint.className = 'split-hint split-hint--owed';
+    } else {
+        hint.textContent = '—'; hint.className = 'split-hint';
+    }
+}
+
+// ---- Pre-fill from form (validation roundtrip) ----
+(function() {
+    const catVal  = document.getElementById('category').value;
+    const modeVal = document.getElementById('mode').value;
+    if (catVal)  cselectPick('cat-cselect',  'category', catVal);
+    if (modeVal) cselectPick('mode-cselect', 'mode',     modeVal);
+})();
 </script>
 {% endblock %}

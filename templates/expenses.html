@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block title %}Expenses — Balance Desk{% endblock %}
+{% block title %}{{ month_name }} {{ year }} — Expenses{% endblock %}
 
 {% block content %}
 
@@ -22,6 +22,14 @@
                 <p class="xstat-label">Total Spent</p>
                 <p class="xstat-value">${{ "%.2f"|format(summary.total_spent) }}</p>
             </div>
+            <div class="xstat">
+                <p class="xstat-label">Transactions</p>
+                <p class="xstat-value">{{ summary.transactions }}</p>
+            </div>
+            <div class="xstat">
+                <p class="xstat-label">Top Category</p>
+                <p class="xstat-value xstat-value--sm">{{ summary.top_category }}</p>
+            </div>
             <div class="xstat xstat--owe">
                 <p class="xstat-label">You Owe</p>
                 <p class="xstat-value">${{ "%.2f"|format(summary.you_owe) }}</p>
@@ -33,7 +41,22 @@
         </div>
 
         <!-- Filter Bar -->
-        <form method="GET" action="{{ url_for('expenses.list_expenses') }}" class="filter-bar">
+        <form method="GET" action="{{ url_for('expenses.list_expenses') }}" class="filter-bar" id="filter-form">
+
+            <!-- Month / Year pickers -->
+            <select name="month" class="filter-select filter-select--period" onchange="this.form.submit()">
+                {% for i, m in month_names | enumerate %}
+                <option value="{{ i + 1 }}" {% if month == i + 1 %}selected{% endif %}>{{ m }}</option>
+                {% endfor %}
+            </select>
+            <select name="year" class="filter-select filter-select--period" onchange="this.form.submit()">
+                {% for y in available_years %}
+                <option value="{{ y }}" {% if year == y %}selected{% endif %}>{{ y }}</option>
+                {% endfor %}
+            </select>
+
+            <span class="filter-divider"></span>
+
             <select name="category" class="filter-select" onchange="this.form.submit()">
                 <option value="">All categories</option>
                 {% for c in categories %}
@@ -46,8 +69,9 @@
                 <option value="{{ m }}" {% if mode_filter == m %}selected{% endif %}>{{ m }}</option>
                 {% endfor %}
             </select>
+
             {% if cat_filter or mode_filter %}
-            <a href="{{ url_for('expenses.list_expenses') }}" class="filter-clear">Clear filters</a>
+            <a href="{{ url_for('expenses.list_expenses', year=year, month=month) }}" class="filter-clear">Clear filters</a>
             {% endif %}
         </form>
 
@@ -101,11 +125,11 @@
                         </td>
                         <td class="col-actions">
                             <a href="{{ url_for('expenses.edit_expense', expense_id=e.id) }}" class="icon-btn icon-btn--edit" title="Edit expense">
-                                <svg width="15" height="15" viewBox="0 0 15 15" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M11.5 1.5a1.414 1.414 0 0 1 2 2L5 12 1 13l1-4 9.5-9.5Z" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                                <svg width="15" height="15" viewBox="0 0 15 15" fill="none"><path d="M11.5 1.5a1.414 1.414 0 0 1 2 2L5 12 1 13l1-4 9.5-9.5Z" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
                             </a>
                             <form method="POST" action="{{ url_for('expenses.delete_expense', expense_id=e.id) }}" style="display:inline" onsubmit="return confirm('Delete this expense?')">
                                 <button type="submit" class="icon-btn icon-btn--delete" title="Delete expense">
-                                    <svg width="15" height="15" viewBox="0 0 15 15" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M3 4h9M6 4V2.5a.5.5 0 0 1 .5-.5h2a.5.5 0 0 1 .5.5V4M5.5 7v4M9.5 7v4M2.5 4l.75 8.25A.75.75 0 0 0 4 13h7a.75.75 0 0 0 .75-.75L12.5 4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                                    <svg width="15" height="15" viewBox="0 0 15 15" fill="none"><path d="M3 4h9M6 4V2.5a.5.5 0 0 1 .5-.5h2a.5.5 0 0 1 .5.5V4M5.5 7v4M9.5 7v4M2.5 4l.75 8.25A.75.75 0 0 0 4 13h7a.75.75 0 0 0 .75-.75L12.5 4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
                                 </button>
                             </form>
                         </td>
@@ -123,21 +147,73 @@
                 </tfoot>
             </table>
         </div>
+
+        <!-- Breakdown / Charts -->
+        <div class="breakdown-section">
+            <h2 class="breakdown-title">Breakdown — {{ month_name }} {{ year }}</h2>
+
+            <div class="breakdown-grid">
+
+                <!-- Category chart -->
+                <div class="breakdown-card">
+                    <p class="breakdown-card-label">By Category</p>
+                    <div class="chart-wrap">
+                        <canvas id="catChart"></canvas>
+                    </div>
+                    <ul class="breakdown-legend" id="catLegend"></ul>
+                </div>
+
+                <!-- Mode chart -->
+                <div class="breakdown-card">
+                    <p class="breakdown-card-label">By Mode</p>
+                    <div class="chart-wrap">
+                        <canvas id="modeChart"></canvas>
+                    </div>
+                    <ul class="breakdown-legend" id="modeLegend"></ul>
+                </div>
+
+                <!-- Owe / Owed card -->
+                <div class="breakdown-card breakdown-card--split">
+                    <p class="breakdown-card-label">Split Summary</p>
+                    <div class="split-stat">
+                        <div class="split-stat-row">
+                            <span class="split-stat-label">You owe</span>
+                            <span class="split-stat-value split-stat-value--owe">${{ "%.2f"|format(you_owe) }}</span>
+                        </div>
+                        <div class="split-stat-bar">
+                            {% set split_total = you_owe + friend_owes %}
+                            <div class="split-stat-bar-owe" style="width:{{ ((you_owe / split_total * 100) | round | int) if split_total else 0 }}%"></div>
+                            <div class="split-stat-bar-owed" style="width:{{ ((friend_owes / split_total * 100) | round | int) if split_total else 0 }}%"></div>
+                        </div>
+                        <div class="split-stat-row">
+                            <span class="split-stat-label">Friend owes you</span>
+                            <span class="split-stat-value split-stat-value--owed">${{ "%.2f"|format(friend_owes) }}</span>
+                        </div>
+                        {% if you_owe == 0 and friend_owes == 0 %}
+                        <p class="split-stat-empty">No split expenses this month.</p>
+                        {% endif %}
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
         {% else %}
         <div class="dashboard-empty">
             <div class="empty-icon">◎</div>
             <h2 class="empty-title">
-                {% if cat_filter or mode_filter %}No expenses match your filters{% else %}No expenses yet{% endif %}
+                {% if cat_filter or mode_filter %}No expenses match your filters
+                {% else %}No expenses in {{ month_name }} {{ year }}{% endif %}
             </h2>
             <p class="empty-body">
                 {% if cat_filter or mode_filter %}
-                    <a href="{{ url_for('expenses.list_expenses') }}">Clear filters</a> or add a new expense.
+                    <a href="{{ url_for('expenses.list_expenses', year=year, month=month) }}">Clear filters</a> or add a new expense.
                 {% else %}
-                    Start tracking by adding your first expense.
+                    Try a different month or add a new expense.
                 {% endif %}
             </p>
             {% if not cat_filter and not mode_filter %}
-            <a href="{{ url_for('expenses.add_expense') }}" class="btn-primary">Add your first expense</a>
+            <a href="{{ url_for('expenses.add_expense') }}" class="btn-primary">Add expense</a>
             {% endif %}
         </div>
         {% endif %}
@@ -145,4 +221,68 @@
     </div>
 </section>
 
+{% endblock %}
+
+{% block scripts %}
+{% if expenses %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+<script>
+const CAT_COLORS = {
+    'Eating Out':    '#e67e22',
+    'Grocery':       '#27ae60',
+    'Travel':        '#2980b9',
+    'Transport':     '#2980b9',
+    'Rent':          '#8e44ad',
+    'Entertainment': '#e91e8c',
+    'Shopping':      '#c0392b',
+    'Bills':         '#16a085',
+};
+const PALETTE = ['#1a472a','#2980b9','#e67e22','#8e44ad','#c0392b','#16a085','#e91e8c','#f39c12','#7f8c8d'];
+
+function colorFor(label, index) {
+    return CAT_COLORS[label] || PALETTE[index % PALETTE.length];
+}
+
+function buildChart(id, data, legendId) {
+    const labels = Object.keys(data);
+    const values = Object.values(data);
+    const total  = values.reduce((a, b) => a + b, 0);
+    const colors = labels.map((l, i) => colorFor(l, i));
+
+    new Chart(document.getElementById(id), {
+        type: 'doughnut',
+        data: {
+            labels,
+            datasets: [{ data: values, backgroundColor: colors, borderWidth: 2, borderColor: '#fff' }]
+        },
+        options: {
+            cutout: '65%',
+            plugins: { legend: { display: false }, tooltip: {
+                callbacks: {
+                    label: ctx => ` $${ctx.parsed.toFixed(2)}  (${(ctx.parsed / total * 100).toFixed(1)}%)`
+                }
+            }},
+        }
+    });
+
+    const legend = document.getElementById(legendId);
+    labels.forEach((l, i) => {
+        const pct = (values[i] / total * 100).toFixed(1);
+        legend.innerHTML += `
+            <li class="legend-item">
+                <span class="legend-dot" style="background:${colors[i]}"></span>
+                <span class="legend-label">${l}</span>
+                <span class="legend-value">$${values[i].toFixed(2)}</span>
+                <span class="legend-pct">${pct}%</span>
+            </li>`;
+    });
+}
+
+const catData  = {{ cat_totals_json | safe }};
+const modeData = {{ mode_totals_json | safe }};
+
+if (Object.keys(catData).length)  buildChart('catChart',  catData,  'catLegend');
+if (Object.keys(modeData).length) buildChart('modeChart', modeData, 'modeLegend');
+</script>
+{% endif %}
 {% endblock %}

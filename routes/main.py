@@ -35,7 +35,10 @@ def dashboard():
     return render_template('dashboard.html',
                            total_month=total_month,
                            transactions=transactions,
-                           top_category=top_category)
+                           top_category=top_category,
+                           month_expenses=month_expenses,
+                           month_name=now.strftime('%B'),
+                           year=now.year)
 
 
 @main_bp.route('/terms')

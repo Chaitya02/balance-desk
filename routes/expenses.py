@@ -1,3 +1,4 @@
+import json
 from datetime import date
 from flask import (Blueprint, render_template, request,
                    redirect, url_for, flash, session)
@@ -14,6 +15,11 @@ DEFAULT_CATEGORIES = [
 ]
 DEFAULT_MODES = ['Friend', 'Cash']
 
+MONTH_NAMES = [
+    'January', 'February', 'March', 'April', 'May', 'June',
+    'July', 'August', 'September', 'October', 'November', 'December',
+]
+
 
 def _user_options(field):
     """Return distinct values the current user has already used for a field."""
@@ -24,35 +30,6 @@ def _user_options(field):
     return [r[0] for r in rows if r[0]]
 
 
-def _summary(user_id, cat_filter=None, mode_filter=None):
-    """Compute summary stats for the current user (with optional filters)."""
-    q = Expense.query.filter_by(user_id=user_id)
-    if cat_filter:
-        q = q.filter_by(category=cat_filter)
-    if mode_filter:
-        q = q.filter_by(mode=mode_filter)
-    expenses = q.all()
-
-    total_spent   = sum(e.amount for e in expenses)
-    transactions  = len(expenses)
-    you_owe       = sum(e.split for e in expenses if e.mode.upper() == 'FRIEND' and e.split)
-    friend_owes   = sum(e.split for e in expenses if e.mode.upper() != 'FRIEND' and e.split)
-
-    # Top category by total amount
-    cat_totals = {}
-    for e in expenses:
-        cat_totals[e.category] = cat_totals.get(e.category, 0) + e.amount
-    top_category = max(cat_totals, key=cat_totals.get) if cat_totals else '—'
-
-    return dict(
-        total_spent=total_spent,
-        transactions=transactions,
-        top_category=top_category,
-        you_owe=you_owe,
-        friend_owes=friend_owes,
-    )
-
-
 # ------------------------------------------------------------------ #
 # /expenses  — list view                                              #
 # ------------------------------------------------------------------ #
@@ -60,30 +37,86 @@ def _summary(user_id, cat_filter=None, mode_filter=None):
 @expenses_bp.route('/expenses')
 @login_required
 def list_expenses():
-    user_id     = session['user_id']
+    user_id = session['user_id']
+    today   = date.today()
+
+    # Month / year filter — default to current month
+    try:
+        year  = int(request.args.get('year',  today.year))
+        month = int(request.args.get('month', today.month))
+        if not (1 <= month <= 12):
+            month = today.month
+    except (ValueError, TypeError):
+        year, month = today.year, today.month
+
     cat_filter  = request.args.get('category', '')
     mode_filter = request.args.get('mode', '')
 
-    q = Expense.query.filter_by(user_id=user_id).order_by(
-        Expense.date.desc(), Expense.id.desc()
-    )
+    # Base query filtered to selected month
+    q = (Expense.query
+         .filter_by(user_id=user_id)
+         .filter(db.extract('year',  Expense.date) == year)
+         .filter(db.extract('month', Expense.date) == month)
+         .order_by(Expense.date.desc(), Expense.id.desc()))
+
     if cat_filter:
         q = q.filter_by(category=cat_filter)
     if mode_filter:
         q = q.filter_by(mode=mode_filter)
 
-    expenses     = q.all()
-    summary      = _summary(user_id, cat_filter or None, mode_filter or None)
-    categories   = sorted(set(DEFAULT_CATEGORIES) | set(_user_options('category')))
-    modes        = sorted(set(DEFAULT_MODES)       | set(_user_options('mode')))
+    expenses = q.all()
 
-    return render_template('expenses.html',
-                           expenses=expenses,
-                           summary=summary,
-                           categories=categories,
-                           modes=modes,
-                           cat_filter=cat_filter,
-                           mode_filter=mode_filter)
+    # Summary stats
+    total_spent = sum(e.amount for e in expenses)
+    you_owe     = sum(e.split for e in expenses if e.mode.upper() == 'FRIEND' and e.split)
+    friend_owes = sum(e.split for e in expenses if e.mode.upper() != 'FRIEND' and e.split)
+
+    # Chart data
+    cat_totals  = {}
+    mode_totals = {}
+    for e in expenses:
+        cat_totals[e.category] = round(cat_totals.get(e.category, 0) + e.amount, 2)
+        key = e.mode.strip().title() if e.mode else 'Other'
+        mode_totals[key] = round(mode_totals.get(key, 0) + e.amount, 2)
+
+    top_category = max(cat_totals, key=cat_totals.get) if cat_totals else '—'
+
+    summary = dict(
+        total_spent=total_spent,
+        transactions=len(expenses),
+        top_category=top_category,
+        you_owe=you_owe,
+        friend_owes=friend_owes,
+    )
+
+    # Available years for the year dropdown
+    year_rows = (db.session.query(db.extract('year', Expense.date))
+                 .filter_by(user_id=user_id)
+                 .distinct()
+                 .all())
+    available_years = sorted({int(r[0]) for r in year_rows} | {today.year}, reverse=True)
+
+    categories = sorted(set(DEFAULT_CATEGORIES) | set(_user_options('category')))
+    modes      = sorted(set(DEFAULT_MODES)       | set(_user_options('mode')))
+
+    return render_template(
+        'expenses.html',
+        expenses=expenses,
+        summary=summary,
+        categories=categories,
+        modes=modes,
+        cat_filter=cat_filter,
+        mode_filter=mode_filter,
+        year=year,
+        month=month,
+        month_name=MONTH_NAMES[month - 1],
+        available_years=available_years,
+        month_names=MONTH_NAMES,
+        cat_totals_json=json.dumps(cat_totals),
+        mode_totals_json=json.dumps(mode_totals),
+        you_owe=you_owe,
+        friend_owes=friend_owes,
+    )
 
 
 # ------------------------------------------------------------------ #
@@ -106,7 +139,6 @@ def add_expense():
         amount_raw  = request.form.get('amount', '').strip()
         split_raw   = request.form.get('split', '0').strip() or '0'
 
-        # ---- validation ----
         error = None
         try:
             amount = float(amount_raw)
@@ -146,7 +178,6 @@ def add_expense():
 
         flash(f'Expense "{title}" added successfully.', 'success')
 
-        # "Add another" button submits with next=add
         if request.form.get('next') == 'add':
             return redirect(url_for('expenses.add_expense'))
         return redirect(url_for('expenses.list_expenses'))
@@ -215,7 +246,9 @@ def edit_expense(expense_id):
         db.session.commit()
 
         flash(f'Expense "{title}" updated successfully.', 'success')
-        return redirect(url_for('expenses.list_expenses'))
+        return redirect(url_for('expenses.list_expenses',
+                                year=expense.date.year,
+                                month=expense.date.month))
 
     return render_template('edit_expense.html',
                            expense=expense,
@@ -234,8 +267,11 @@ def edit_expense(expense_id):
 def delete_expense(expense_id):
     user_id = session['user_id']
     expense = Expense.query.filter_by(id=expense_id, user_id=user_id).first_or_404()
-    title = expense.title
+    title      = expense.title
+    exp_year   = expense.date.year
+    exp_month  = expense.date.month
     db.session.delete(expense)
     db.session.commit()
     flash(f'Expense "{title}" deleted.', 'success')
-    return redirect(url_for('expenses.list_expenses'))
+    return redirect(url_for('expenses.list_expenses',
+                            year=exp_year, month=exp_month))

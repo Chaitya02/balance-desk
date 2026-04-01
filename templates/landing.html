@@ -4,95 +4,183 @@
 
 {% block content %}
 
+<!-- ============================================================ -->
+<!-- HERO                                                         -->
+<!-- ============================================================ -->
 <section class="hero">
     <div class="hero-inner">
-        <div class="hero-badge">Personal Finance Tracker</div>
-        <h1 class="hero-title">
-            Know where your<br>
-            <em>money goes</em>
-        </h1>
-        <p class="hero-subtitle">
-            Log expenses, understand your spending patterns,
-            and take control of your financial life —
-            one transaction at a time.
-        </p>
-        <div class="hero-actions">
-            <a href="{{ url_for('auth.register') }}" class="btn-primary">Start tracking free</a>
-            <a href="#" class="btn-ghost" id="how-it-works-btn">How it works</a>
+        <div class="hero-left">
+            <div class="hero-badge">Personal Finance Tracker</div>
+            <h1 class="hero-title">
+                Know where your<br>
+                <em>money goes</em>
+            </h1>
+            <p class="hero-subtitle">
+                Log expenses, understand your spending patterns,
+                and take control of your financial life —
+                one transaction at a time.
+            </p>
+            <div class="hero-actions">
+                <a href="{{ url_for('auth.register') }}" class="btn-primary">
+                    <svg width="15" height="15" viewBox="0 0 15 15" fill="none"><path d="M7.5 1v13M1 7.5h13" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+                    Start Tracking
+                </a>
+                <a href="#" class="btn-ghost" id="how-it-works-btn">
+                    <svg width="15" height="15" viewBox="0 0 15 15" fill="none"><circle cx="7.5" cy="7.5" r="6.5" stroke="currentColor" stroke-width="1.4"/><path d="M6 5l4 2.5L6 10V5z" fill="currentColor" stroke="none"/></svg>
+                    How It Works
+                </a>
+            </div>
         </div>
-    </div>
-    <div class="hero-visual">
-        <div class="mock-card">
-            <div class="mock-card-header">
-                <span class="mock-label">{{ now.strftime("%B %Y") }}</span>
-                <span class="mock-total">$3,850</span>
-            </div>
-            <div class="mock-bars">
-                <div class="mock-bar-row">
-                    <span class="mock-cat">Bills</span>
-                    <div class="mock-bar-track">
-                        <div class="mock-bar" style="width: 65%"></div>
+
+        <div class="hero-visual">
+            <div class="mock-card">
+                <!-- Card header -->
+                <div class="mock-card-header">
+                    <div class="mock-period">
+                        <span class="mock-period-text">{{ now.strftime("%B %Y") }}</span>
+                        <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M3 5l4 4 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
                     </div>
-                    <span class="mock-amt">$1,600</span>
+                    <div class="mock-header-stats">
+                        <div class="mock-header-total">
+                            <p class="mock-total-label">Total Spent</p>
+                            <p class="mock-total">$3,850</p>
+                        </div>
+                        <div class="mock-change">
+                            <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M6 9V3M3 6l3-3 3 3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                            12%
+                            <!-- <span class="mock-change-sub">vs last month</span> -->
+                        </div>
+                    </div>
                 </div>
-                <div class="mock-bar-row">
-                    <span class="mock-cat">Food</span>
-                    <div class="mock-bar-track">
-                        <div class="mock-bar mock-bar-2" style="width: 45%"></div>
+
+                <!-- Chart area -->
+                <div class="mock-chart-area">
+                    <!-- Donut chart (CSS conic-gradient) -->
+                    <div class="mock-donut-wrap">
+                        <div class="mock-donut">
+                            <div class="mock-donut-inner">
+                                <p class="mock-donut-total">$3,850</p>
+                                <p class="mock-donut-sub">Total</p>
+                            </div>
+                        </div>
                     </div>
-                    <span class="mock-amt">$900</span>
+
+                    <!-- Category bars -->
+                    <div class="mock-bars">
+                        <div class="mock-bar-row">
+                            <span class="mock-dot" style="background:#1a472a"></span>
+                            <span class="mock-cat">Bills</span>
+                            <div class="mock-bar-track"><div class="mock-bar" style="width:65%;background:#1a472a"></div></div>
+                            <span class="mock-amt">$1,580</span>
+                            <!-- <span class="mock-pct">41%</span> -->
+                        </div>
+                        <div class="mock-bar-row">
+                            <span class="mock-dot" style="background:#e67e22"></span>
+                            <span class="mock-cat">Food</span>
+                            <div class="mock-bar-track"><div class="mock-bar" style="width:44%;background:#e67e22"></div></div>
+                            <span class="mock-amt">$885</span>
+                            <!-- <span class="mock-pct">23%</span> -->
+                        </div>
+                        <div class="mock-bar-row">
+                            <span class="mock-dot" style="background:#2980b9"></span>
+                            <span class="mock-cat">Shopping</span>
+                            <div class="mock-bar-track"><div class="mock-bar" style="width:25%;background:#2980b9"></div></div>
+                            <span class="mock-amt">$500</span>
+                            <!-- <span class="mock-pct">13%</span> -->
+                        </div>
+                        <div class="mock-bar-row">
+                            <span class="mock-dot" style="background:#8e44ad"></span>
+                            <span class="mock-cat">Transport</span>
+                            <div class="mock-bar-track"><div class="mock-bar" style="width:22%;background:#8e44ad"></div></div>
+                            <span class="mock-amt">$462</span>
+                            <!-- <span class="mock-pct">12%</span> -->
+                        </div>
+                        <div class="mock-bar-row">
+                            <span class="mock-dot" style="background:#c0392b"></span>
+                            <span class="mock-cat">Health</span>
+                            <div class="mock-bar-track"><div class="mock-bar" style="width:20%;background:#c0392b"></div></div>
+                            <span class="mock-amt">$423</span>
+                            <!-- <span class="mock-pct">11%</span> -->
+                        </div>
+                    </div>
                 </div>
-                <div class="mock-bar-row">
-                    <span class="mock-cat">Shopping</span>
-                    <div class="mock-bar-track">
-                        <div class="mock-bar mock-bar-3" style="width: 25%"></div>
-                    </div>
-                    <span class="mock-amt">$500</span>
-                </div>
-                <div class="mock-bar-row">
-                    <span class="mock-cat">Transport</span>
-                    <div class="mock-bar-track">
-                        <div class="mock-bar mock-bar-4" style="width: 22%"></div>
-                    </div>
-                    <span class="mock-amt">$450</span>
-                </div>
-                <div class="mock-bar-row">
-                    <span class="mock-cat">Health</span>
-                    <div class="mock-bar-track">
-                        <div class="mock-bar mock-bar-5" style="width: 20%"></div>
-                    </div>
-                <span class="mock-amt">$400</span>
-            </div>
             </div>
         </div>
     </div>
 </section>
 
+<!-- ============================================================ -->
+<!-- FEATURES                                                     -->
+<!-- ============================================================ -->
 <section class="features" id="features">
     <div class="features-inner">
+
         <div class="feature-card">
-            <div class="feature-icon">$</div>
-            <h3 class="feature-title">Log expenses instantly</h3>
-            <p class="feature-body">Add any expense in seconds. Category, amount, date, description — all in one simple form.</p>
+            <div class="feature-icon feature-icon--green">
+                <svg width="22" height="22" viewBox="0 0 22 22" fill="none"><circle cx="11" cy="11" r="9" stroke="currentColor" stroke-width="1.6"/><path d="M11 7v4.5l3 1.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+            </div>
+            <div class="feature-text">
+                <h3 class="feature-title">Log expenses instantly</h3>
+                <p class="feature-body">Add any expense in seconds. Category, amount, date, description — all in one simple form.</p>
+            </div>
         </div>
+
         <div class="feature-card">
-            <div class="feature-icon">◎</div>
-            <h3 class="feature-title">Understand your patterns</h3>
-            <p class="feature-body">See exactly where your money goes with category breakdowns and monthly summaries.</p>
+            <div class="feature-icon feature-icon--orange">
+                <svg width="22" height="22" viewBox="0 0 22 22" fill="none"><rect x="3" y="12" width="3.5" height="7" rx="1" fill="currentColor" opacity=".5"/><rect x="9.25" y="8" width="3.5" height="11" rx="1" fill="currentColor" opacity=".75"/><rect x="15.5" y="4" width="3.5" height="15" rx="1" fill="currentColor"/></svg>
+            </div>
+            <div class="feature-text">
+                <h3 class="feature-title">Understand your patterns</h3>
+                <p class="feature-body">See exactly where your money goes with category breakdowns and monthly summaries.</p>
+            </div>
         </div>
+
         <div class="feature-card">
-            <div class="feature-icon">◷</div>
-            <h3 class="feature-title">Filter by time period</h3>
-            <p class="feature-body">View your spending for any date range — last week, last month, or a custom period.</p>
+            <div class="feature-icon feature-icon--blue">
+                <svg width="22" height="22" viewBox="0 0 22 22" fill="none"><rect x="3" y="5" width="16" height="14" rx="2" stroke="currentColor" stroke-width="1.6"/><path d="M3 9h16M8 5V3M14 5V3" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+            </div>
+            <div class="feature-text">
+                <h3 class="feature-title">Filter by time period</h3>
+                <p class="feature-body">View your spending for any date range — last week, last month, or a custom period that works for you.</p>
+            </div>
         </div>
+
     </div>
 </section>
 
+<!-- ============================================================ -->
+<!-- CTA BANNER                                                   -->
+<!-- ============================================================ -->
 <section class="cta-section">
+    <!-- Decorative leaves -->
+    <div class="cta-leaf cta-leaf--left" aria-hidden="true">
+        <svg width="120" height="200" viewBox="0 0 120 200" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M60 180 C20 140 -10 80 30 30 C50 10 80 5 100 20 C80 60 50 100 60 180Z" fill="#1a472a" opacity="0.12"/>
+            <path d="M30 190 C0 150 10 90 50 50 C30 90 20 140 30 190Z" fill="#1a472a" opacity="0.08"/>
+        </svg>
+    </div>
+    <div class="cta-leaf cta-leaf--right" aria-hidden="true">
+        <svg width="120" height="200" viewBox="0 0 120 200" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M60 180 C100 140 130 80 90 30 C70 10 40 5 20 20 C40 60 70 100 60 180Z" fill="#1a472a" opacity="0.12"/>
+            <path d="M90 190 C120 150 110 90 70 50 C90 90 100 140 90 190Z" fill="#1a472a" opacity="0.08"/>
+        </svg>
+    </div>
+
     <div class="cta-inner">
-        <h2 class="cta-title">Ready to take control?</h2>
-        <p class="cta-body">Join thousands of people who track their expenses with Balance Desk.</p>
-        <a href="{{ url_for('auth.register') }}" class="btn-primary">Create free account</a>
+        <div class="cta-icon">
+            <svg width="28" height="28" viewBox="0 0 28 28" fill="none"><path d="M14 22V10M8 16l6-6 6 6" stroke="white" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </div>
+        <div class="cta-content">
+            <h2 class="cta-title">Ready to take control?</h2>
+            <p class="cta-body">Join thousands of people who track their expenses with Balance Desk.</p>
+        </div>
+        <div class="cta-action">
+            <a href="{{ url_for('auth.register') }}" class="btn-cta">
+                Create Free Account
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </a>
+            <p class="cta-fine">No credit card required &bull; Free forever</p>
+        </div>
     </div>
 </section>
 
@@ -138,12 +226,8 @@
 
     openBtn.addEventListener('click', openModal);
     closeBtn.addEventListener('click', closeModal);
-
-    modal.addEventListener('click', function (e) {
-        if (e.target === modal) closeModal();
-    });
-
-    document.addEventListener('keydown', function (e) {
+    modal.addEventListener('click', function(e) { if (e.target === modal) closeModal(); });
+    document.addEventListener('keydown', function(e) {
         if (e.key === 'Escape' && modal.classList.contains('is-open')) closeModal();
     });
 </script>
