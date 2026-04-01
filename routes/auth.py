@@ -15,7 +15,7 @@ def register():
         return redirect(url_for('main.dashboard'))
 
     if request.method == 'POST':
-        name     = request.form.get('name', '').strip()
+        name     = ' '.join(request.form.get('name', '').split()).title()
         email    = request.form.get('email', '').strip().lower()
         password = request.form.get('password', '')
         confirm  = request.form.get('confirm_password', '')
@@ -150,7 +150,7 @@ def profile():
         action = request.form.get('action')
 
         if action == 'update_name':
-            name = request.form.get('name', '').strip()
+            name = ' '.join(request.form.get('name', '').split()).title()
             if not name:
                 flash('Name cannot be empty.', 'error')
             else:

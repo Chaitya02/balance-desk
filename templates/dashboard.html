@@ -17,7 +17,7 @@
 
         <div class="dashboard-stats">
             <div class="stat-card">
-                <p class="stat-label">Total this month</p>
+                <p class="stat-label">My Spend ({{ month_name }})</p>
                 <p class="stat-value">${{ "%.2f"|format(total_month) }}</p>
             </div>
             <div class="stat-card">
@@ -29,6 +29,14 @@
                 <p class="stat-value {% if not top_category %}stat-value--muted{% endif %}">
                     {{ top_category or '—' }}
                 </p>
+            </div>
+            <div class="stat-card stat-card--owe">
+                <p class="stat-label">You Owe</p>
+                <p class="stat-value">${{ "%.2f"|format(you_owe) }}</p>
+            </div>
+            <div class="stat-card stat-card--owed">
+                <p class="stat-label">You Are Owed</p>
+                <p class="stat-value">${{ "%.2f"|format(friend_owes) }}</p>
             </div>
         </div>
 
@@ -70,23 +78,24 @@
                         </td>
                         <td class="col-amount cell-num">${{ "%.2f"|format(e.amount) }}</td>
                         <td class="col-context">
-                            {% if e.split and e.split > 0 %}
-                                {% if e.mode.upper() == 'FRIEND' %}
+                            {% set by_me = (not e.mode) or (e.mode.lower() in payment_methods_lc) %}
+                            {% if not by_me and e.split and e.split > 0 %}
                                 <span class="pill pill--owe">You owe</span>
-                                {% else %}
+                            {% elif by_me and e.split and e.split > 0 and e.split < e.amount %}
                                 <span class="pill pill--owed">Friend owes</span>
-                                {% endif %}
                             {% else %}
-                            <span class="cell-muted">—</span>
+                                <span class="cell-muted">—</span>
                             {% endif %}
                         </td>
                     </tr>
                     {% endfor %}
                 </tbody>
                 <tfoot>
+                    {% set ns = namespace(my_spend_total=0) %}
+                    {% for e in month_expenses %}{% set ns.my_spend_total = ns.my_spend_total + (e.split if e.split else e.amount) %}{% endfor %}
                     <tr class="sheet-footer">
                         <td colspan="4" class="footer-label">{{ month_expenses|length }} expense{{ 's' if month_expenses|length != 1 }}</td>
-                        <td class="col-amount cell-num footer-total">${{ "%.2f"|format(month_expenses|sum(attribute='amount')) }}</td>
+                        <td class="col-amount cell-num footer-total" title="My total spend">${{ "%.2f"|format(ns.my_spend_total) }}</td>
                         <td></td>
                     </tr>
                 </tfoot>

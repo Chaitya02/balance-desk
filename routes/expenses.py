@@ -11,9 +11,12 @@ expenses_bp = Blueprint('expenses', __name__)
 # Default option lists (users can type their own values too)          #
 # ------------------------------------------------------------------ #
 DEFAULT_CATEGORIES = [
-    'Eating Out', 'Grocery', 'Travel', 'Shopping', 'Bills',
+    'Eating Out', 'Groceries', 'Transport', 'Rent', 'Utilities',
+    'Shopping', 'Entertainment', 'Health', 'Insurance', 'Education',
+    'Subscriptions', 'Travel', 'Personal Care', 'Gifts', 'Miscellaneous',
 ]
-DEFAULT_MODES = ['Friend', 'Cash']
+
+DEFAULT_PAYMENT_METHODS = ['Cash']
 
 MONTH_NAMES = [
     'January', 'February', 'March', 'April', 'May', 'June',
@@ -28,6 +31,27 @@ def _user_options(field):
             .distinct()
             .all())
     return [r[0] for r in rows if r[0]]
+
+
+def _payer_names():
+    """Return distinct payer names (mode values that are not payment methods)."""
+    pm_lc = {m.lower() for m in DEFAULT_PAYMENT_METHODS}
+    rows = (db.session.query(Expense.mode)
+            .filter_by(user_id=session['user_id'])
+            .distinct()
+            .all())
+    return [r[0] for r in rows if r[0] and r[0].lower() not in pm_lc]
+
+
+def _used_payment_methods():
+    """Return payment methods previously used by current user; falls back to defaults for new users."""
+    pm_lc = {m.lower() for m in DEFAULT_PAYMENT_METHODS}
+    rows = (db.session.query(Expense.mode)
+            .filter_by(user_id=session['user_id'])
+            .distinct()
+            .all())
+    used = [r[0] for r in rows if r[0] and r[0].lower() in pm_lc]
+    return used if used else list(DEFAULT_PAYMENT_METHODS)
 
 
 # ------------------------------------------------------------------ #
@@ -66,18 +90,32 @@ def list_expenses():
 
     expenses = q.all()
 
-    # Summary stats
-    total_spent = sum(e.amount for e in expenses)
-    you_owe     = sum(e.split for e in expenses if e.mode.upper() == 'FRIEND' and e.split)
-    friend_owes = sum(e.split for e in expenses if e.mode.upper() != 'FRIEND' and e.split)
+    # Helper: was this expense paid by me (vs someone else)?
+    pm_lc = {m.lower() for m in DEFAULT_PAYMENT_METHODS}
 
-    # Chart data
+    def paid_by_me(e):
+        return not e.mode or e.mode.lower() in pm_lc
+
+    def my_spend(e):
+        """My actual share: split if set, else the full amount."""
+        return e.split if e.split else e.amount
+
+    # Summary stats
+    total_spent = round(sum(my_spend(e) for e in expenses), 2)
+    # I paid but friend owes me the rest
+    friend_owes = round(sum(e.amount - e.split
+                            for e in expenses
+                            if paid_by_me(e) and e.split and e.split < e.amount), 2)
+    # Someone else paid; I owe them my share
+    you_owe     = round(sum(my_spend(e) for e in expenses if not paid_by_me(e)), 2)
+
+    # Chart data (use my_spend for accurate personal spend by category)
     cat_totals  = {}
     mode_totals = {}
     for e in expenses:
-        cat_totals[e.category] = round(cat_totals.get(e.category, 0) + e.amount, 2)
+        cat_totals[e.category] = round(cat_totals.get(e.category, 0) + my_spend(e), 2)
         key = e.mode.strip().title() if e.mode else 'Other'
-        mode_totals[key] = round(mode_totals.get(key, 0) + e.amount, 2)
+        mode_totals[key] = round(mode_totals.get(key, 0) + my_spend(e), 2)
 
     top_category = max(cat_totals, key=cat_totals.get) if cat_totals else '—'
 
@@ -97,7 +135,7 @@ def list_expenses():
     available_years = sorted({int(r[0]) for r in year_rows} | {today.year}, reverse=True)
 
     categories = sorted(set(DEFAULT_CATEGORIES) | set(_user_options('category')))
-    modes      = sorted(set(DEFAULT_MODES)       | set(_user_options('mode')))
+    modes      = sorted(set(_user_options('mode')))
 
     return render_template(
         'expenses.html',
@@ -116,6 +154,7 @@ def list_expenses():
         mode_totals_json=json.dumps(mode_totals),
         you_owe=you_owe,
         friend_owes=friend_owes,
+        payment_methods_lc=[m.lower() for m in DEFAULT_PAYMENT_METHODS],
     )
 
 
@@ -127,15 +166,15 @@ def list_expenses():
 @login_required
 def add_expense():
     user_id    = session['user_id']
-    categories = sorted(set(DEFAULT_CATEGORIES) | set(_user_options('category')))
-    modes      = sorted(set(DEFAULT_MODES)       | set(_user_options('mode')))
 
     if request.method == 'POST':
         exp_date    = request.form.get('date', '').strip()
-        title       = request.form.get('title', '').strip()
-        description = request.form.get('description', '').strip()
+        title       = ' '.join(request.form.get('title', '').split()).title()
+        desc_raw    = ' '.join(request.form.get('description', '').split())
+        description = (desc_raw[0].upper() + desc_raw[1:].lower()) if desc_raw else ''
         category    = request.form.get('category', '').strip()
-        mode        = request.form.get('mode', '').strip()
+        mode_raw    = ''.join(w.capitalize() for w in request.form.get('mode', 'Me').split())
+        mode        = mode_raw if mode_raw else 'Me'
         amount_raw  = request.form.get('amount', '').strip()
         split_raw   = request.form.get('split', '0').strip() or '0'
 
@@ -152,15 +191,16 @@ def add_expense():
             elif amount <= 0:
                 error = 'Amount must be greater than 0.'
             elif split < 0:
-                error = 'Split cannot be negative.'
+                error = 'My Split cannot be negative.'
             elif split > amount:
-                error = 'Split cannot exceed the total Amount.'
+                error = 'My Split cannot exceed the total Amount.'
 
         if error:
             return render_template('add_expense.html',
                                    error=error,
-                                   categories=categories,
-                                   modes=modes,
+                                   categories=DEFAULT_CATEGORIES,
+                                   payment_methods=_used_payment_methods(),
+                                   payer_names=_payer_names(),
                                    form=request.form)
 
         expense = Expense(
@@ -183,8 +223,9 @@ def add_expense():
         return redirect(url_for('expenses.list_expenses'))
 
     return render_template('add_expense.html',
-                           categories=categories,
-                           modes=modes,
+                           categories=DEFAULT_CATEGORIES,
+                           payment_methods=DEFAULT_PAYMENT_METHODS,
+                           payer_names=_payer_names(),
                            form={},
                            today=date.today().isoformat())
 
@@ -199,15 +240,14 @@ def edit_expense(expense_id):
     user_id = session['user_id']
     expense = Expense.query.filter_by(id=expense_id, user_id=user_id).first_or_404()
 
-    categories = sorted(set(DEFAULT_CATEGORIES) | set(_user_options('category')))
-    modes      = sorted(set(DEFAULT_MODES)       | set(_user_options('mode')))
-
     if request.method == 'POST':
         exp_date    = request.form.get('date', '').strip()
-        title       = request.form.get('title', '').strip()
-        description = request.form.get('description', '').strip()
+        title       = ' '.join(request.form.get('title', '').split()).title()
+        desc_raw    = ' '.join(request.form.get('description', '').split())
+        description = (desc_raw[0].upper() + desc_raw[1:].lower()) if desc_raw else ''
         category    = request.form.get('category', '').strip()
-        mode        = request.form.get('mode', '').strip()
+        mode_raw    = ''.join(w.capitalize() for w in request.form.get('mode', 'Me').split())
+        mode        = mode_raw if mode_raw else 'Me'
         amount_raw  = request.form.get('amount', '').strip()
         split_raw   = request.form.get('split', '0').strip() or '0'
 
@@ -224,16 +264,17 @@ def edit_expense(expense_id):
             elif amount <= 0:
                 error = 'Amount must be greater than 0.'
             elif split < 0:
-                error = 'Split cannot be negative.'
+                error = 'My Split cannot be negative.'
             elif split > amount:
-                error = 'Split cannot exceed the total Amount.'
+                error = 'My Split cannot exceed the total Amount.'
 
         if error:
             return render_template('edit_expense.html',
                                    error=error,
                                    expense=expense,
-                                   categories=categories,
-                                   modes=modes,
+                                   categories=DEFAULT_CATEGORIES,
+                                   payment_methods=_used_payment_methods(),
+                                   payer_names=_payer_names(),
                                    form=request.form)
 
         expense.date        = date.fromisoformat(exp_date)
@@ -252,8 +293,9 @@ def edit_expense(expense_id):
 
     return render_template('edit_expense.html',
                            expense=expense,
-                           categories=categories,
-                           modes=modes,
+                           categories=DEFAULT_CATEGORIES,
+                           payment_methods=DEFAULT_PAYMENT_METHODS,
+                           payer_names=_payer_names(),
                            form={},
                            error=None)
 

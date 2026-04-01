@@ -86,7 +86,7 @@
                         <th class="col-cat">Category</th>
                         <th class="col-mode">Mode</th>
                         <th class="col-amount">Amount</th>
-                        <th class="col-split">Split</th>
+                        <th class="col-split">My Split</th>
                         <th class="col-context">Status</th>
                         <th class="col-actions"></th>
                     </tr>
@@ -113,14 +113,13 @@
                             {% if e.split %}${{ "%.2f"|format(e.split) }}{% else %}—{% endif %}
                         </td>
                         <td class="col-context">
-                            {% if e.split and e.split > 0 %}
-                                {% if e.mode.upper() == 'FRIEND' %}
+                            {% set by_me = (not e.mode) or (e.mode.lower() in payment_methods_lc) %}
+                            {% if not by_me and e.split and e.split > 0 %}
                                 <span class="pill pill--owe">You owe</span>
-                                {% else %}
+                            {% elif by_me and e.split and e.split > 0 and e.split < e.amount %}
                                 <span class="pill pill--owed">Friend owes</span>
-                                {% endif %}
                             {% else %}
-                            <span class="cell-muted">—</span>
+                                <span class="cell-muted">—</span>
                             {% endif %}
                         </td>
                         <td class="col-actions">
@@ -137,10 +136,12 @@
                     {% endfor %}
                 </tbody>
                 <tfoot>
+                    {% set ns = namespace(my_spend_total=0) %}
+                    {% for e in expenses %}{% set ns.my_spend_total = ns.my_spend_total + (e.split if e.split else e.amount) %}{% endfor %}
                     <tr class="sheet-footer">
                         <td colspan="4" class="footer-label">{{ expenses|length }} expense{{ 's' if expenses|length != 1 }}</td>
                         <td class="col-amount cell-num footer-total">${{ "%.2f"|format(expenses|sum(attribute='amount')) }}</td>
-                        <td class="col-split cell-num footer-total">${{ "%.2f"|format(expenses|sum(attribute='split')) }}</td>
+                        <td class="col-split cell-num footer-total">${{ "%.2f"|format(ns.my_spend_total) }}</td>
                         <td></td>
                         <td></td>
                     </tr>

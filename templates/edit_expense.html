@@ -28,8 +28,11 @@
                     <!-- Date -->
                     <div class="form-group">
                         <label for="date">Date <span class="req">*</span></label>
-                        <input type="date" id="date" name="date" class="form-input"
-                               value="{{ form.get('date', expense.date.isoformat()) }}" required>
+                        <div class="date-input-wrap">
+                            <input type="date" id="date" name="date" class="form-input date-input"
+                                   value="{{ form.get('date', expense.date.isoformat()) }}" required>
+                            <svg class="date-icon" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="12" height="11" rx="1.5"/><path d="M2 7h12M5 1v2M11 1v2"/></svg>
+                        </div>
                     </div>
 
                     <!-- Title -->
@@ -37,7 +40,7 @@
                         <label for="title">Title <span class="req">*</span></label>
                         <input type="text" id="title" name="title" class="form-input"
                                placeholder="e.g. Starbucks, Walmart"
-                               value="{{ form.get('title', expense.title) }}" required autofocus>
+                               value="{{ form.get('title', expense.title) }}" required autofocus autocomplete="off">
                     </div>
 
                     <!-- Description -->
@@ -45,10 +48,10 @@
                         <label for="description">Description</label>
                         <input type="text" id="description" name="description" class="form-input"
                                placeholder="Optional note"
-                               value="{{ form.get('description', expense.description or '') }}">
+                               value="{{ form.get('description', expense.description or '') }}" autocomplete="off">
                     </div>
 
-                    <!-- Category custom dropdown -->
+                    <!-- Category (fixed list) -->
                     <div class="form-group">
                         <label>Category <span class="req">*</span></label>
                         <input type="hidden" id="category" name="category"
@@ -57,49 +60,20 @@
                             <button type="button" class="cselect-trigger" onclick="cselectToggle('cat-cselect')">
                                 <span class="cselect-preview">
                                     <span class="cselect-preview-icon" id="cat-preview-icon"></span>
-                                    <span class="cselect-preview-text" id="cat-preview-text">Select or type new...</span>
+                                    <span class="cselect-preview-text" id="cat-preview-text">Select a category...</span>
                                 </span>
                                 <svg class="cselect-chevron" width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M4 6l4 4 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
                             </button>
                             <div class="cselect-panel">
-                                <input type="text" class="cselect-search" placeholder="Search or type new..."
+                                <input type="text" class="cselect-search" placeholder="Search categories..."
                                        oninput="cselectFilter('cat-cselect', this.value)"
-                                       onkeydown="cselectKeydown(event, 'cat-cselect', 'category')">
+                                       onkeydown="cselectKeydownFixed(event, 'cat-cselect', 'category')">
                                 <ul class="cselect-list" id="cat-cselect-list">
                                     {% for c in categories %}
                                     <li class="cselect-option" data-value="{{ c }}"
                                         onclick="cselectPick('cat-cselect', 'category', '{{ c }}')">
                                         <span class="cselect-option-icon" data-label="{{ c }}"></span>
                                         <span class="cselect-option-label">{{ c }}</span>
-                                        <svg class="cselect-option-check" width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M2.5 7l3 3 6-6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
-                                    </li>
-                                    {% endfor %}
-                                </ul>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Mode custom dropdown -->
-                    <div class="form-group">
-                        <label>Mode</label>
-                        <input type="hidden" id="mode" name="mode"
-                               value="{{ form.get('mode', expense.mode or '') }}">
-                        <div class="cselect" id="mode-cselect">
-                            <button type="button" class="cselect-trigger" onclick="cselectToggle('mode-cselect')">
-                                <span class="cselect-preview">
-                                    <span class="cselect-preview-text" id="mode-preview-text">Select or type new...</span>
-                                </span>
-                                <svg class="cselect-chevron" width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M4 6l4 4 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
-                            </button>
-                            <div class="cselect-panel">
-                                <input type="text" class="cselect-search" placeholder="Search or type new..."
-                                       oninput="cselectFilter('mode-cselect', this.value)"
-                                       onkeydown="cselectKeydown(event, 'mode-cselect', 'mode')">
-                                <ul class="cselect-list" id="mode-cselect-list">
-                                    {% for m in modes %}
-                                    <li class="cselect-option" data-value="{{ m }}"
-                                        onclick="cselectPick('mode-cselect', 'mode', '{{ m }}')">
-                                        <span class="cselect-option-label">{{ m }}</span>
                                         <svg class="cselect-option-check" width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M2.5 7l3 3 6-6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
                                     </li>
                                     {% endfor %}
@@ -116,14 +90,61 @@
                                value="{{ form.get('amount', expense.amount) }}" required>
                     </div>
 
+                    <!-- Paid By -->
+                    <div class="form-group form-group--full">
+                        <label>Paid by</label>
+                        <input type="hidden" id="mode" name="mode"
+                               value="{{ form.get('mode', expense.mode or '') }}">
+                        <div class="paid-by-wrap" id="paid-by-wrap" data-payment-methods="{{ payment_methods | tojson | e }}">
+                            <div class="paid-toggle-group">
+                                <button type="button" id="paid-me-btn" class="paid-toggle-btn paid-toggle-btn--active" onclick="setPaidBy('Me')">
+                                    <svg width="15" height="15" viewBox="0 0 15 15" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><circle cx="7.5" cy="5" r="2.5"/><path d="M2.5 13c0-2.76 2.24-5 5-5s5 2.24 5 5"/></svg>
+                                    Me
+                                </button>
+                                <button type="button" id="paid-other-btn" class="paid-toggle-btn" onclick="setPaidBy('other')">
+                                    <svg width="15" height="15" viewBox="0 0 15 15" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><circle cx="5.5" cy="5" r="2"/><path d="M1.5 13c0-2.21 1.79-4 4-4"/><circle cx="10.5" cy="5" r="2"/><path d="M13.5 13c0-2.21-1.79-4-4-4"/></svg>
+                                    Someone else
+                                </button>
+                            </div>
+                            <!-- Me → payment method -->
+                            <div class="paid-payer-field" id="payment-method-field">
+                                <input type="text" id="payment-method-input" class="form-input"
+                                       placeholder="How did you pay? e.g. Cash, Card, UPI"
+                                       list="payment-datalist" autocomplete="off">
+                                <datalist id="payment-datalist">
+                                    {% for m in payment_methods %}
+                                    <option value="{{ m }}">
+                                    {% endfor %}
+                                </datalist>
+                            </div>
+                            <!-- Someone else → payer name -->
+                            <div class="paid-payer-field" id="paid-payer-field" style="display:none">
+                                <input type="text" id="payer-name" class="form-input"
+                                       placeholder="Who paid? e.g. Rahul"
+                                       list="payer-datalist" autocomplete="off">
+                                <datalist id="payer-datalist">
+                                    {% for name in payer_names %}
+                                    <option value="{{ name }}">
+                                    {% endfor %}
+                                </datalist>
+                            </div>
+                        </div>
+                    </div>
+
                     <!-- Split -->
                     <div class="form-group">
                         <label for="split">
-                            Split ($)
+                            <span class="split-label-wrap">
+                                My Split ($)
+                                <span class="split-info" aria-label="Split info">
+                                    <svg width="13" height="13" viewBox="0 0 13 13" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"><circle cx="6.5" cy="6.5" r="5.5"/><path d="M6.5 6v3M6.5 4h.01"/></svg>
+                                    <span class="split-info-tip">Your actual share of this expense.<br>Leave blank → defaults to the full amount.<br>Enter less if someone else covered part of it.</span>
+                                </span>
+                            </span>
                             <span class="split-hint" id="split-hint">—</span>
                         </label>
                         <input type="number" id="split" name="split" class="form-input"
-                               min="0" step="0.01" placeholder="0.00"
+                               min="0" step="0.01" placeholder="Full amount (default)"
                                value="{{ form.get('split', expense.split or '') }}">
                     </div>
 
@@ -145,13 +166,21 @@
 {% block scripts %}
 <script>
 const CAT_ICONS = {
-    'Bills': `<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M10 1.5H4.5A1.5 1.5 0 0 0 3 3v10a1.5 1.5 0 0 0 1.5 1.5h7A1.5 1.5 0 0 0 13 13V5l-3-3.5z"/><path d="M10 1.5V5H13M6 8.5h4M6 11h2.5"/></svg>`,
-    'Eating Out': `<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"><path d="M5 1v5a2 2 0 0 0 4 0V1M7 7v8M11 1c0 2.5 2 3.5 2 5.5 0 1.5-1 2.5-2 2.5v6"/></svg>`,
-    'Grocery': `<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M1.5 2.5H3l2 7h6.5l1.5-5H5.5"/><circle cx="6" cy="13" r="1"/><circle cx="10" cy="13" r="1"/></svg>`,
-    'Shopping': `<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5.5 6V4.5a2.5 2.5 0 0 1 5 0V6"/><path d="M2.5 6h11l-1 8h-9l-1-8z"/></svg>`,
-    'Travel': `<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M14 8.5L2 3l2.5 5.5L2 14l12-5.5z"/><path d="M4.5 8.5h7"/></svg>`,
-    'Entertainment': `<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="8" r="6"/><path d="M6.5 5.5l4 2.5-4 2.5V5.5z" fill="currentColor" stroke="none"/></svg>`,
-    'Transport': `<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="12" height="9" rx="2"/><path d="M5 12v1.5M11 12v1.5M2 7h12"/></svg>`,
+    'Eating Out':   `<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"><path d="M5 1v5a2 2 0 0 0 4 0V1M7 7v8M11 1c0 2.5 2 3.5 2 5.5 0 1.5-1 2.5-2 2.5v6"/></svg>`,
+    'Groceries':    `<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M1.5 2.5H3l2 7h6.5l1.5-5H5.5"/><circle cx="6" cy="13" r="1"/><circle cx="10" cy="13" r="1"/></svg>`,
+    'Transport':    `<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="12" height="9" rx="2"/><path d="M5 12v1.5M11 12v1.5M2 7h12"/></svg>`,
+    'Rent':         `<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M1.5 7L8 2l6.5 5M3 7v6.5h4V10h2v3.5h4V7"/></svg>`,
+    'Utilities':    `<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 1L5.5 8H10L7 15"/></svg>`,
+    'Shopping':     `<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5.5 6V4.5a2.5 2.5 0 0 1 5 0V6"/><path d="M2.5 6h11l-1 8h-9l-1-8z"/></svg>`,
+    'Entertainment':`<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="8" r="6"/><path d="M6.5 5.5l4 2.5-4 2.5V5.5z" fill="currentColor" stroke="none"/></svg>`,
+    'Health':       `<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M8 13.5C8 13.5 2 9.5 2 5.5a3 3 0 0 1 6-1 3 3 0 0 1 6 1c0 4-6 8-6 8z"/></svg>`,
+    'Insurance':    `<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M8 1.5L2.5 4v4.5c0 3 2.5 5.5 5.5 6 3-.5 5.5-3 5.5-6V4L8 1.5z"/></svg>`,
+    'Education':    `<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M8 2L1.5 5.5 8 9l6.5-3.5L8 2z"/><path d="M4 7v4.5c0 1.5 1.8 2.5 4 2.5s4-1 4-2.5V7M14.5 5.5v4"/></svg>`,
+    'Subscriptions':`<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M13.5 8A5.5 5.5 0 1 1 8 2.5"/><path d="M10.5 1v3.5H14"/></svg>`,
+    'Travel':       `<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M13.5 4.5l-8 2.5L4 5l-2 .5 1.5 2.5L2 10.5l2-.5.5-2L12 10l.5 2 2-.5-1-7z"/></svg>`,
+    'Personal Care':`<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="6" r="3"/><path d="M3 14c0-2.76 2.24-5 5-5s5 2.24 5 5"/></svg>`,
+    'Gifts':        `<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="12" height="7" rx="1"/><path d="M1.5 5h13v2H1.5zM8 5V14M8 5c0 0-1-3.5 1.5-3.5S11 5 11 5M8 5c0 0 1-3.5-1.5-3.5S5 5 5 5"/></svg>`,
+    'Miscellaneous':`<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"><circle cx="4.5" cy="4.5" r="1.5"/><circle cx="11.5" cy="4.5" r="1.5"/><circle cx="4.5" cy="11.5" r="1.5"/><circle cx="11.5" cy="11.5" r="1.5"/></svg>`,
 };
 const DEFAULT_ICON = `<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"><path d="M2 5h12M2 8h8M2 11h5"/></svg>`;
 function catIcon(label) { return CAT_ICONS[label] || DEFAULT_ICON; }
@@ -171,8 +200,12 @@ function cselectFilter(id, q) {
         opt.style.display = opt.dataset.value.toLowerCase().includes(q.toLowerCase()) ? '' : 'none';
     });
 }
-function cselectKeydown(e, selectId, inputId) {
-    if (e.key === 'Enter') { e.preventDefault(); const v = e.target.value.trim(); if (v) cselectPick(selectId, inputId, v); }
+function cselectKeydownFixed(e, selectId, inputId) {
+    if (e.key === 'Enter') {
+        e.preventDefault();
+        const first = document.querySelector(`#${selectId} .cselect-option:not([style*="none"])`);
+        if (first) cselectPick(selectId, inputId, first.dataset.value);
+    }
     if (e.key === 'Escape') document.getElementById(selectId).classList.remove('cselect--open');
 }
 function cselectPick(selectId, inputId, value) {
@@ -187,25 +220,87 @@ function cselectPick(selectId, inputId, value) {
     const s = document.querySelector(`#${selectId} .cselect-search`);
     s.value = ''; cselectFilter(selectId, '');
     document.getElementById(selectId).classList.remove('cselect--open');
-    if (inputId === 'mode') updateSplitHint();
 }
 document.addEventListener('click', () => document.querySelectorAll('.cselect--open').forEach(e => e.classList.remove('cselect--open')));
 document.querySelectorAll('.cselect').forEach(el => el.addEventListener('click', e => e.stopPropagation()));
 
+document.getElementById('title').addEventListener('blur', function () {
+    const words = this.value.trim().replace(/\s+/g, ' ').split(' ');
+    this.value = words.map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ');
+});
+document.getElementById('description').addEventListener('blur', function () {
+    const v = this.value.trim().replace(/\s+/g, ' ');
+    this.value = v ? v.charAt(0).toUpperCase() + v.slice(1).toLowerCase() : '';
+});
+
+const PM_LC = JSON.parse(document.getElementById('paid-by-wrap').dataset.paymentMethods).map(m => m.toLowerCase());
+
+function setPaidBy(val) {
+    const modeHidden = document.getElementById('mode');
+    const pmField    = document.getElementById('payment-method-field');
+    const payerField = document.getElementById('paid-payer-field');
+    const pmInput    = document.getElementById('payment-method-input');
+    const payerInput = document.getElementById('payer-name');
+    const meBtn      = document.getElementById('paid-me-btn');
+    const otherBtn   = document.getElementById('paid-other-btn');
+    if (val === 'Me') {
+        pmField.style.display    = '';
+        payerField.style.display = 'none';
+        meBtn.classList.add('paid-toggle-btn--active');
+        otherBtn.classList.remove('paid-toggle-btn--active');
+        modeHidden.value = pmInput.value.trim();
+    } else {
+        pmField.style.display    = 'none';
+        payerField.style.display = '';
+        meBtn.classList.remove('paid-toggle-btn--active');
+        otherBtn.classList.add('paid-toggle-btn--active');
+        payerInput.focus();
+        modeHidden.value = normalizePayer(payerInput.value);
+    }
+    updateSplitHint();
+}
+document.getElementById('payment-method-input').addEventListener('input', function () {
+    document.getElementById('mode').value = this.value.trim();
+});
+document.getElementById('payment-method-input').addEventListener('blur', function () {
+    const words = this.value.trim().replace(/\s+/g, ' ').split(' ');
+    this.value = words.map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ');
+    document.getElementById('mode').value = this.value;
+});
+function normalizePayer(v) {
+    return v.trim().split(/\s+/).map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join('');
+}
+document.getElementById('payer-name').addEventListener('input', function () {
+    document.getElementById('mode').value = normalizePayer(this.value) || '';
+    updateSplitHint();
+});
+document.getElementById('payer-name').addEventListener('blur', function () {
+    const formatted = normalizePayer(this.value);
+    this.value = formatted;
+    document.getElementById('mode').value = formatted || '';
+    updateSplitHint();
+});
+
 function updateSplitHint() {
-    const val = (document.getElementById('mode').value || '').trim().toUpperCase();
+    const val  = document.getElementById('mode').value;
     const hint = document.getElementById('split-hint');
     if (!hint) return;
-    if (val === 'FRIEND') { hint.textContent = 'you owe'; hint.className = 'split-hint split-hint--owe'; }
-    else if (val) { hint.textContent = 'friend owes you'; hint.className = 'split-hint split-hint--owed'; }
-    else { hint.textContent = '—'; hint.className = 'split-hint'; }
+    const isPM = !val || PM_LC.includes(val.toLowerCase());
+    if (isPM) { hint.textContent = '—'; hint.className = 'split-hint'; }
+    else { hint.textContent = `you owe ${val}`; hint.className = 'split-hint split-hint--owe'; }
 }
 
-(function() {
+(function () {
     const catVal  = document.getElementById('category').value;
     const modeVal = document.getElementById('mode').value;
-    if (catVal)  cselectPick('cat-cselect',  'category', catVal);
-    if (modeVal) cselectPick('mode-cselect', 'mode',     modeVal);
+    if (catVal) cselectPick('cat-cselect', 'category', catVal);
+    if (modeVal && !PM_LC.includes(modeVal.toLowerCase())) {
+        document.getElementById('payer-name').value = modeVal;
+        setPaidBy('other');
+    } else {
+        if (modeVal) document.getElementById('payment-method-input').value = modeVal;
+        setPaidBy('Me');
+    }
 })();
 </script>
 {% endblock %}

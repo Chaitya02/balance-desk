@@ -29,32 +29,51 @@
 
             <div class="auth-divider"><span>or</span></div>
 
-            <form method="POST" action="{{ url_for('auth.register') }}">
+            <form method="POST" action="{{ url_for('auth.register') }}" id="register-form" novalidate>
                 <div class="form-group">
                     <label for="name">Full name</label>
                     <input type="text" id="name" name="name"
                            class="form-input" placeholder="Your name"
                            value="{{ name or '' }}"
-                           required autofocus>
+                           required autofocus autocomplete="name">
                 </div>
                 <div class="form-group">
                     <label for="email">Email address</label>
                     <input type="email" id="email" name="email"
                            class="form-input" placeholder="you@example.com"
                            value="{{ email or '' }}"
-                           required>
+                           required autocomplete="email">
                 </div>
                 <div class="form-group">
                     <label for="password">Password</label>
-                    <input type="password" id="password" name="password"
-                           class="form-input" placeholder="Min. 6 characters"
-                           required>
+                    <div class="input-wrap">
+                        <input type="password" id="password" name="password"
+                               class="form-input has-toggle" placeholder="Min. 6 characters"
+                               required autocomplete="new-password">
+                        <button type="button" class="pw-toggle" aria-label="Show password" data-target="password">
+                            <svg class="icon-eye" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                            <svg class="icon-eye-off" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="display:none"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+                        </button>
+                    </div>
+                    <div class="pw-strength-wrap" id="pw-strength-wrap" style="display:none">
+                        <div class="pw-strength-bar">
+                            <div class="pw-strength-fill" id="pw-strength-fill"></div>
+                        </div>
+                        <span class="pw-strength-label" id="pw-strength-label"></span>
+                    </div>
                 </div>
                 <div class="form-group">
                     <label for="confirm_password">Confirm password</label>
-                    <input type="password" id="confirm_password" name="confirm_password"
-                           class="form-input" placeholder="Repeat your password"
-                           required>
+                    <div class="input-wrap">
+                        <input type="password" id="confirm_password" name="confirm_password"
+                               class="form-input has-toggle" placeholder="Repeat your password"
+                               required autocomplete="new-password">
+                        <button type="button" class="pw-toggle" aria-label="Show password" data-target="confirm_password">
+                            <svg class="icon-eye" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                            <svg class="icon-eye-off" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="display:none"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+                        </button>
+                    </div>
+                    <p class="field-hint" id="confirm-hint"></p>
                 </div>
                 <button type="submit" class="btn-submit">Create account</button>
             </form>
@@ -68,4 +87,70 @@
     </div>
 </section>
 
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // ── Password show/hide ──────────────────────────────────────────
+    document.querySelectorAll('.pw-toggle').forEach(btn => {
+        btn.addEventListener('click', function () {
+            const input = document.getElementById(this.dataset.target);
+            const isHidden = input.type === 'password';
+            input.type = isHidden ? 'text' : 'password';
+            this.querySelector('.icon-eye').style.display     = isHidden ? 'none' : '';
+            this.querySelector('.icon-eye-off').style.display = isHidden ? ''     : 'none';
+            this.setAttribute('aria-label', isHidden ? 'Hide password' : 'Show password');
+        });
+    });
+
+    // ── Name → title case + collapse spaces ────────────────────────
+    const nameInput = document.getElementById('name');
+    nameInput.addEventListener('blur', function () {
+        const words = this.value.trim().replace(/\s+/g, ' ').split(' ');
+        this.value = words.map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ');
+    });
+
+    // ── Password strength ───────────────────────────────────────────
+    const pwInput       = document.getElementById('password');
+    const strengthWrap  = document.getElementById('pw-strength-wrap');
+    const strengthFill  = document.getElementById('pw-strength-fill');
+    const strengthLabel = document.getElementById('pw-strength-label');
+
+    const levels = [
+        { max: 5,  label: 'Too short',  color: '#c0392b', width: '20%' },
+        { max: 7,  label: 'Weak',       color: '#e67e22', width: '40%' },
+        { max: 10, label: 'Fair',       color: '#f1c40f', width: '65%' },
+        { max: 14, label: 'Good',       color: '#2ecc71', width: '82%' },
+        { max: Infinity, label: 'Strong', color: '#1a472a', width: '100%' },
+    ];
+
+    pwInput.addEventListener('input', function () {
+        const len = this.value.length;
+        if (len === 0) { strengthWrap.style.display = 'none'; return; }
+        strengthWrap.style.display = 'flex';
+        const lvl = levels.find(l => len <= l.max);
+        strengthFill.style.width      = lvl.width;
+        strengthFill.style.background = lvl.color;
+        strengthLabel.textContent     = lvl.label;
+        strengthLabel.style.color     = lvl.color;
+    });
+
+    // ── Confirm password match ──────────────────────────────────────
+    const confirmInput = document.getElementById('confirm_password');
+    const confirmHint  = document.getElementById('confirm-hint');
+
+    function checkMatch() {
+        if (!confirmInput.value) { confirmHint.textContent = ''; return; }
+        if (confirmInput.value === pwInput.value) {
+            confirmHint.textContent = 'Passwords match';
+            confirmHint.className   = 'field-hint field-hint--ok';
+        } else {
+            confirmHint.textContent = 'Passwords do not match';
+            confirmHint.className   = 'field-hint field-hint--err';
+        }
+    }
+
+    confirmInput.addEventListener('input', checkMatch);
+    pwInput.addEventListener('input', checkMatch);
+</script>
 {% endblock %}
