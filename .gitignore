@@ -6,3 +6,5 @@ __pycache__/
 .env
 .DS_Store
 .claude/plans/
+
+client_secret_1009208871502-0uif81mgl000kunv0tr6jqvkqmqh82pp.apps.googleusercontent.com.json

@@ -10,10 +10,9 @@ expenses_bp = Blueprint('expenses', __name__)
 # Default option lists (users can type their own values too)          #
 # ------------------------------------------------------------------ #
 DEFAULT_CATEGORIES = [
-    'Eating out', 'Grocery', 'Transport', 'Utilities',
-    'Rent', 'Entertainment', 'Health', 'Shopping', 'Travel', 'Other',
+    'Eating Out', 'Grocery', 'Travel', 'Shopping', 'Bills',
 ]
-DEFAULT_MODES = ['AMEX', 'FREEDOM RISE', 'FRIEND', 'Cash', 'Debit']
+DEFAULT_MODES = ['Friend', 'Cash']
 
 
 def _user_options(field):
@@ -157,3 +156,86 @@ def add_expense():
                            modes=modes,
                            form={},
                            today=date.today().isoformat())
+
+
+# ------------------------------------------------------------------ #
+# /expenses/<id>/edit  — edit view                                    #
+# ------------------------------------------------------------------ #
+
+@expenses_bp.route('/expenses/<int:expense_id>/edit', methods=['GET', 'POST'])
+@login_required
+def edit_expense(expense_id):
+    user_id = session['user_id']
+    expense = Expense.query.filter_by(id=expense_id, user_id=user_id).first_or_404()
+
+    categories = sorted(set(DEFAULT_CATEGORIES) | set(_user_options('category')))
+    modes      = sorted(set(DEFAULT_MODES)       | set(_user_options('mode')))
+
+    if request.method == 'POST':
+        exp_date    = request.form.get('date', '').strip()
+        title       = request.form.get('title', '').strip()
+        description = request.form.get('description', '').strip()
+        category    = request.form.get('category', '').strip()
+        mode        = request.form.get('mode', '').strip()
+        amount_raw  = request.form.get('amount', '').strip()
+        split_raw   = request.form.get('split', '0').strip() or '0'
+
+        error = None
+        try:
+            amount = float(amount_raw)
+            split  = float(split_raw)
+        except ValueError:
+            error = 'Amount and Split must be valid numbers.'
+
+        if not error:
+            if not exp_date or not title or not category:
+                error = 'Date, Title, and Category are required.'
+            elif amount <= 0:
+                error = 'Amount must be greater than 0.'
+            elif split < 0:
+                error = 'Split cannot be negative.'
+            elif split > amount:
+                error = 'Split cannot exceed the total Amount.'
+
+        if error:
+            return render_template('edit_expense.html',
+                                   error=error,
+                                   expense=expense,
+                                   categories=categories,
+                                   modes=modes,
+                                   form=request.form)
+
+        expense.date        = date.fromisoformat(exp_date)
+        expense.title       = title
+        expense.description = description
+        expense.category    = category
+        expense.mode        = mode
+        expense.amount      = amount
+        expense.split       = split
+        db.session.commit()
+
+        flash(f'Expense "{title}" updated successfully.', 'success')
+        return redirect(url_for('expenses.list_expenses'))
+
+    return render_template('edit_expense.html',
+                           expense=expense,
+                           categories=categories,
+                           modes=modes,
+                           form={},
+                           error=None)
+
+
+# ------------------------------------------------------------------ #
+# /expenses/<id>/delete  — delete                                     #
+# ------------------------------------------------------------------ #
+
+@expenses_bp.route('/expenses/<int:expense_id>/delete', methods=['POST'])
+@login_required
+def delete_expense(expense_id):
+    user_id = session['user_id']
+    expense = Expense.query.filter_by(id=expense_id, user_id=user_id).first_or_404()
+    title = expense.title
+    db.session.delete(expense)
+    db.session.commit()
+    flash(f'Expense "{title}" deleted.', 'success')
+    return redirect(url_for('expenses.list_expenses'))

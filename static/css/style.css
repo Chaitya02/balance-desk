@@ -675,6 +675,53 @@ a { color: inherit; text-decoration: none; }
 
 .form-input::placeholder { color: var(--ink-faint); }
 
+/* Google OAuth button */
+.btn-google {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.625rem;
+    width: 100%;
+    padding: 0.7rem 1rem;
+    background: var(--paper-card);
+    color: var(--ink-soft);
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius-sm);
+    font-family: var(--font);
+    font-size: 0.9rem;
+    font-weight: 600;
+    cursor: pointer;
+    text-decoration: none;
+    transition: border-color 0.15s, box-shadow 0.15s, background 0.15s;
+    letter-spacing: -0.01em;
+    margin-bottom: 1rem;
+}
+.btn-google:hover {
+    border-color: #4285F4;
+    background: #f8faff;
+    box-shadow: 0 0 0 3px rgba(66,133,244,0.1);
+}
+
+/* Divider between OAuth and email form */
+.auth-divider {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-bottom: 1.25rem;
+    color: var(--ink-faint);
+    font-size: 0.78rem;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+}
+.auth-divider::before,
+.auth-divider::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--border);
+}
+
 .btn-submit {
     width: 100%;
     padding: 0.75rem;
@@ -930,12 +977,15 @@ a { color: inherit; text-decoration: none; }
 
 .filter-clear:hover { color: var(--danger); }
 
-/* Spreadsheet table */
+/* ------------------------------------------------------------------ */
+/* Expenses table — clean, open design                                 */
+/* ------------------------------------------------------------------ */
+
 .sheet-wrap {
+    background: var(--paper-card);
     border: 1px solid var(--border);
     border-radius: var(--radius-md);
     overflow: hidden;
-    box-shadow: var(--shadow-sm);
 }
 
 .sheet {
@@ -944,92 +994,318 @@ a { color: inherit; text-decoration: none; }
     font-size: 0.875rem;
 }
 
+/* Header */
 .sheet thead tr {
-    background: var(--paper-warm);
-    border-bottom: 2px solid var(--border);
+    border-bottom: 1px solid var(--border);
 }
 
 .sheet th {
-    padding: 0.65rem 0.9rem;
+    padding: 0.75rem 1rem;
     text-align: left;
-    font-size: 0.72rem;
+    font-size: 0.7rem;
     font-weight: 700;
     text-transform: uppercase;
-    letter-spacing: 0.07em;
-    color: var(--ink-muted);
+    letter-spacing: 0.08em;
+    color: var(--ink-faint);
     white-space: nowrap;
+    background: transparent;
 }
 
-.sheet-row { border-bottom: 1px solid var(--border-soft); transition: background 0.1s; }
+/* Rows */
+.sheet-row {
+    border-bottom: 1px solid var(--border-soft);
+    transition: background 0.12s;
+}
 .sheet-row:last-child { border-bottom: none; }
-.sheet-row--alt { background: #fafaf8; }
-.sheet-row:hover { background: var(--accent-light); }
+.sheet-row:hover { background: #f9f8f5; }
+.sheet-row:hover .icon-btn { opacity: 1; }
 
-.sheet td { padding: 0.65rem 0.9rem; color: var(--ink-soft); vertical-align: middle; }
+.sheet td {
+    padding: 0.9rem 1rem;
+    color: var(--ink-soft);
+    vertical-align: middle;
+}
 
-.cell-muted  { color: var(--ink-faint); }
-.cell-bold   { font-weight: 600; color: var(--ink); }
+/* Cell helpers */
+.cell-muted  { color: var(--ink-faint); font-size: 0.825rem; }
+.cell-bold   { display: block; font-weight: 600; color: var(--ink); line-height: 1.3; }
+.cell-desc   { display: block; font-size: 0.78rem; color: var(--ink-faint); margin-top: 1px; }
+.cell-date   { font-size: 0.82rem; color: var(--ink-muted); white-space: nowrap; }
 .cell-num    { font-weight: 600; text-align: right; font-variant-numeric: tabular-nums; }
 
-.col-num     { width: 40px; }
-.col-date    { width: 110px; white-space: nowrap; }
-.col-amount,
-.col-split   { width: 90px; }
-.col-context { width: 110px; }
+/* Column widths */
+.col-date    { width: 105px; }
+.col-title   { min-width: 160px; }
+.col-cat     { width: 140px; }
+.col-mode    { width: 100px; }
+.col-amount  { width: 95px; }
+.col-split   { width: 85px; }
+.col-context { width: 115px; }
+.col-actions { width: 72px; text-align: right; white-space: nowrap; }
 
-/* Tags */
-.tag {
+/* Category dot */
+.cat-dot {
     display: inline-block;
-    padding: 0.2rem 0.6rem;
-    background: var(--paper-warm);
-    border: 1px solid var(--border);
-    border-radius: 999px;
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    margin-right: 6px;
+    vertical-align: 1px;
+    background: var(--ink-faint);
+    flex-shrink: 0;
+}
+.cat-dot--eating-out      { background: #e67e22; }
+.cat-dot--grocery         { background: #27ae60; }
+.cat-dot--transport       { background: #2980b9; }
+.cat-dot--rent            { background: #8e44ad; }
+.cat-dot--entertainment   { background: #e91e8c; }
+.cat-dot--shopping        { background: #c0392b; }
+
+/* Mode badge */
+.mode-badge {
+    display: inline-block;
+    padding: 0.18rem 0.55rem;
+    border-radius: 5px;
     font-size: 0.75rem;
     font-weight: 600;
-    color: var(--ink-soft);
-    white-space: nowrap;
-}
-
-.tag--mode {
-    background: var(--accent-light);
-    border-color: rgba(26,71,42,0.15);
-    color: var(--accent);
+    background: var(--paper-warm);
+    color: var(--ink-muted);
+    letter-spacing: 0.01em;
 }
 
 /* Owe / Owed pills */
 .pill {
     display: inline-block;
-    padding: 0.2rem 0.65rem;
+    padding: 0.2rem 0.6rem;
     border-radius: 999px;
     font-size: 0.72rem;
     font-weight: 700;
+    letter-spacing: 0.01em;
 }
-
 .pill--owe  { background: var(--danger-light); color: var(--danger); }
 .pill--owed { background: var(--accent-light);  color: var(--accent); }
 
+/* Icon action buttons */
+.icon-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    border-radius: 6px;
+    border: none;
+    background: transparent;
+    cursor: pointer;
+    opacity: 0;
+    transition: opacity 0.12s, background 0.12s, color 0.12s;
+    color: var(--ink-muted);
+    text-decoration: none;
+}
+.icon-btn--edit:hover  { background: var(--accent-light); color: var(--accent); }
+.icon-btn--delete:hover { background: var(--danger-light); color: var(--danger); }
+
 /* Table footer */
 .sheet-footer {
-    background: var(--paper-warm);
-    border-top: 2px solid var(--border);
+    background: #fafaf8;
+    border-top: 1px solid var(--border);
 }
-
-.sheet tfoot td { padding: 0.65rem 0.9rem; }
+.sheet tfoot td { padding: 0.75rem 1rem; }
 
 .footer-label {
-    font-size: 0.8rem;
-    font-weight: 700;
-    color: var(--ink-muted);
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: var(--ink-faint);
     text-transform: uppercase;
-    letter-spacing: 0.06em;
+    letter-spacing: 0.07em;
 }
-
 .footer-total {
     font-weight: 800;
     font-size: 0.9rem;
     color: var(--ink);
     text-align: right;
 }
+
+/* ------------------------------------------------------------------ */
+/* Navbar avatar                                                       */
+/* ------------------------------------------------------------------ */
+
+.nav-avatar-wrap { display: flex; align-items: center; }
+
+.nav-avatar {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    overflow: hidden;
+    border: 2px solid var(--border);
+    transition: border-color 0.15s;
+    text-decoration: none;
+    flex-shrink: 0;
+}
+.nav-avatar:hover { border-color: var(--accent); }
+
+.nav-avatar-img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.nav-avatar-initials {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--accent);
+    color: #fff;
+    font-size: 0.78rem;
+    font-weight: 700;
+    letter-spacing: 0;
+}
+
+/* ------------------------------------------------------------------ */
+/* Profile page                                                        */
+/* ------------------------------------------------------------------ */
+
+.profile-page { padding: 2.5rem 2rem 5rem; }
+
+.profile-inner {
+    max-width: 680px;
+    margin: 0 auto;
+}
+
+.profile-header { margin-bottom: 2rem; }
+
+.profile-title {
+    font-size: 1.75rem;
+    font-weight: 800;
+    color: var(--ink);
+    letter-spacing: -0.03em;
+}
+
+/* Hero block */
+.profile-hero {
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+    background: var(--paper-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    padding: 1.5rem;
+    margin-bottom: 1.75rem;
+}
+
+.profile-avatar {
+    width: 72px;
+    height: 72px;
+    border-radius: 50%;
+    overflow: hidden;
+    border: 2px solid var(--border);
+    flex-shrink: 0;
+}
+
+.profile-avatar-img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.profile-avatar-initials {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--accent);
+    color: #fff;
+    font-size: 1.6rem;
+    font-weight: 800;
+}
+
+.profile-name {
+    font-size: 1.15rem;
+    font-weight: 700;
+    color: var(--ink);
+    margin-bottom: 0.2rem;
+}
+
+.profile-email {
+    font-size: 0.875rem;
+    color: var(--ink-muted);
+    margin-bottom: 0.65rem;
+}
+
+.profile-badges {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+
+.profile-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.2rem 0.6rem;
+    border-radius: 999px;
+    font-size: 0.72rem;
+    font-weight: 600;
+}
+
+.profile-badge--google {
+    background: #e8f0fe;
+    color: #1a73e8;
+}
+
+.profile-badge--pw {
+    background: var(--accent-light);
+    color: var(--accent);
+}
+
+/* Section cards */
+.profile-sections {
+    display: grid;
+    gap: 1.25rem;
+}
+
+.profile-card {
+    background: var(--paper-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    padding: 1.5rem;
+}
+
+.profile-card-title {
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--ink);
+    margin-bottom: 1.1rem;
+    padding-bottom: 0.75rem;
+    border-bottom: 1px solid var(--border-soft);
+}
+
+.profile-card-hint {
+    font-size: 0.85rem;
+    color: var(--ink-muted);
+    margin-bottom: 1.1rem;
+    line-height: 1.5;
+}
+
+.btn-submit-sm {
+    padding: 0.55rem 1.25rem;
+    background: var(--ink);
+    color: var(--paper);
+    border: none;
+    border-radius: var(--radius-sm);
+    font-family: var(--font);
+    font-size: 0.875rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background 0.2s;
+    margin-top: 0.25rem;
+}
+
+.btn-submit-sm:hover { background: var(--accent); }
 
 /* ------------------------------------------------------------------ */
 /* Add Expense form page                                               */

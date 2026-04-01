@@ -1,0 +1,112 @@
+{% extends "base.html" %}
+
+{% block title %}Profile — Balance Desk{% endblock %}
+
+{% block content %}
+
+<section class="profile-page">
+    <div class="profile-inner">
+
+        <div class="profile-header">
+            <h1 class="profile-title">Profile</h1>
+        </div>
+
+        <!-- Avatar + identity -->
+        <div class="profile-hero">
+            <div class="profile-avatar">
+                {% if user.avatar_url %}
+                    <img src="{{ user.avatar_url }}" alt="{{ user.name }}" class="profile-avatar-img">
+                {% else %}
+                    <span class="profile-avatar-initials">{{ user.name[0].upper() }}</span>
+                {% endif %}
+            </div>
+            <div class="profile-identity">
+                <p class="profile-name">{{ user.name }}</p>
+                <p class="profile-email">{{ user.email }}</p>
+                <div class="profile-badges">
+                    {% if user.google_id %}
+                    <span class="profile-badge profile-badge--google">
+                        <svg width="12" height="12" viewBox="0 0 18 18" fill="none" style="vertical-align:-1px;margin-right:4px">
+                            <path d="M17.64 9.205c0-.639-.057-1.252-.164-1.841H9v3.481h4.844a4.14 4.14 0 0 1-1.796 2.716v2.259h2.908c1.702-1.567 2.684-3.875 2.684-6.615Z" fill="#4285F4"/>
+                            <path d="M9 18c2.43 0 4.467-.806 5.956-2.18l-2.908-2.259c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 0 0 9 18Z" fill="#34A853"/>
+                            <path d="M3.964 10.71A5.41 5.41 0 0 1 3.682 9c0-.593.102-1.17.282-1.71V4.958H.957A8.996 8.996 0 0 0 0 9c0 1.452.348 2.827.957 4.042l3.007-2.332Z" fill="#FBBC05"/>
+                            <path d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 0 0 .957 4.958L3.964 7.29C4.672 5.163 6.656 3.58 9 3.58Z" fill="#EA4335"/>
+                        </svg>
+                        Google connected
+                    </span>
+                    {% endif %}
+                    {% if user.password_hash %}
+                    <span class="profile-badge profile-badge--pw">
+                        <svg width="11" height="11" viewBox="0 0 15 15" fill="none" style="vertical-align:-1px;margin-right:4px"><rect x="2" y="6" width="11" height="8" rx="1.5" stroke="currentColor" stroke-width="1.4"/><path d="M5 6V4a2.5 2.5 0 0 1 5 0v2" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
+                        Password set
+                    </span>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <div class="profile-sections">
+
+            <!-- Update name -->
+            <div class="profile-card">
+                <h2 class="profile-card-title">Display name</h2>
+                <form method="POST" action="{{ url_for('auth.profile') }}">
+                    <input type="hidden" name="action" value="update_name">
+                    <div class="form-group">
+                        <label for="name">Full name</label>
+                        <input type="text" id="name" name="name" class="form-input"
+                               value="{{ user.name }}" required autofocus>
+                    </div>
+                    <button type="submit" class="btn-submit-sm">Save name</button>
+                </form>
+            </div>
+
+            <!-- Password -->
+            <div class="profile-card">
+                {% if user.password_hash %}
+                <h2 class="profile-card-title">Change password</h2>
+                <form method="POST" action="{{ url_for('auth.profile') }}">
+                    <input type="hidden" name="action" value="change_password">
+                    <div class="form-group">
+                        <label for="current_password">Current password</label>
+                        <input type="password" id="current_password" name="current_password"
+                               class="form-input" placeholder="Enter current password" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="new_password">New password</label>
+                        <input type="password" id="new_password" name="new_password"
+                               class="form-input" placeholder="Min. 6 characters" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="confirm_password">Confirm new password</label>
+                        <input type="password" id="confirm_password" name="confirm_password"
+                               class="form-input" placeholder="Repeat new password" required>
+                    </div>
+                    <button type="submit" class="btn-submit-sm">Update password</button>
+                </form>
+                {% else %}
+                <h2 class="profile-card-title">Set a password</h2>
+                <p class="profile-card-hint">You signed in with Google. Set a password to also be able to log in with your email.</p>
+                <form method="POST" action="{{ url_for('auth.profile') }}">
+                    <input type="hidden" name="action" value="change_password">
+                    <div class="form-group">
+                        <label for="new_password">New password</label>
+                        <input type="password" id="new_password" name="new_password"
+                               class="form-input" placeholder="Min. 6 characters" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="confirm_password">Confirm password</label>
+                        <input type="password" id="confirm_password" name="confirm_password"
+                               class="form-input" placeholder="Repeat password" required>
+                    </div>
+                    <button type="submit" class="btn-submit-sm">Set password</button>
+                </form>
+                {% endif %}
+            </div>
+
+        </div>
+
+    </div>
+</section>
+
+{% endblock %}

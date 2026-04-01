@@ -48,23 +48,3 @@ def privacy():
     return render_template('privacy.html')
 
 
-# ------------------------------------------------------------------ #
-# Placeholder routes — students will implement these                  #
-# ------------------------------------------------------------------ #
-
-@main_bp.route('/profile')
-@login_required
-def profile():
-    return 'Profile page — coming in Step 4'
-
-
-@main_bp.route('/expenses/<int:id>/edit')
-@login_required
-def edit_expense(id):
-    return f'Edit expense {id} — coming in Step 8'
-
-
-@main_bp.route('/expenses/<int:id>/delete')
-@login_required
-def delete_expense(id):
-    return f'Delete expense {id} — coming in Step 9'

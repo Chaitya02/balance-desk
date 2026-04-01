@@ -10,7 +10,9 @@ class User(db.Model):
     id            = db.Column(db.Integer, primary_key=True)
     name          = db.Column(db.String(100), nullable=False)
     email         = db.Column(db.String(150), unique=True, nullable=False)
-    password_hash = db.Column(db.String(256), nullable=False)
+    password_hash = db.Column(db.String(256), nullable=True)   # null for OAuth-only accounts
+    google_id     = db.Column(db.String(128), unique=True, nullable=True)
+    avatar_url    = db.Column(db.String(512), nullable=True)
     created_at    = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
 
     expenses = db.relationship('Expense', backref='user', lazy='dynamic',
