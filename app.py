@@ -3,6 +3,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 from flask import Flask, session
+from werkzeug.middleware.proxy_fix import ProxyFix
 from authlib.integrations.flask_client import OAuth
 from models import db, User
 from routes.auth import auth_bp
@@ -14,6 +15,7 @@ oauth = OAuth()
 
 def create_app():
     app = Flask(__name__)
+    app.wsgi_app = ProxyFix(app.wsgi_app, x_proto=1, x_host=1)
 
     app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'dev-secret-change-in-production')
     app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///balance_desk.db'
