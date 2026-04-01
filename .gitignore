@@ -1,10 +1,11 @@
 .venv/
-expense_tracker.db
+instance/
+*.db
 __pycache__/
 *.pyc
 *.pyo
 .env
 .DS_Store
-.claude/plans/
+.claude/
 
-client_secret_1009208871502-0uif81mgl000kunv0tr6jqvkqmqh82pp.apps.googleusercontent.com.json
+client_secret*.json
