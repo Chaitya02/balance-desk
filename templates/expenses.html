@@ -1,0 +1,147 @@
+{% extends "base.html" %}
+
+{% block title %}Expenses — Balance Desk{% endblock %}
+
+{% block content %}
+
+<section class="expenses-page">
+    <div class="expenses-inner">
+
+        <!-- Header -->
+        <div class="expenses-header">
+            <h1 class="expenses-title">Expenses</h1>
+            <a href="{{ url_for('expenses.add_expense') }}" class="btn-primary">+ Add expense</a>
+        </div>
+
+        <!-- Summary Strip -->
+        <div class="expenses-summary">
+            <div class="xstat">
+                <p class="xstat-label">Total Spent</p>
+                <p class="xstat-value">${{ "%.2f"|format(summary.total_spent) }}</p>
+            </div>
+            <div class="xstat">
+                <p class="xstat-label">Transactions</p>
+                <p class="xstat-value">{{ summary.transactions }}</p>
+            </div>
+            <div class="xstat">
+                <p class="xstat-label">Top Category</p>
+                <p class="xstat-value xstat-value--sm">{{ summary.top_category }}</p>
+            </div>
+            <div class="xstat xstat--owe">
+                <p class="xstat-label">You Owe</p>
+                <p class="xstat-value">${{ "%.2f"|format(summary.you_owe) }}</p>
+            </div>
+            <div class="xstat xstat--owed">
+                <p class="xstat-label">You Are Owed</p>
+                <p class="xstat-value">${{ "%.2f"|format(summary.friend_owes) }}</p>
+            </div>
+        </div>
+
+        <!-- Filter Bar -->
+        <form method="GET" action="{{ url_for('expenses.list_expenses') }}" class="filter-bar">
+            <select name="category" class="filter-select" onchange="this.form.submit()">
+                <option value="">All categories</option>
+                {% for c in categories %}
+                <option value="{{ c }}" {% if cat_filter == c %}selected{% endif %}>{{ c }}</option>
+                {% endfor %}
+            </select>
+            <select name="mode" class="filter-select" onchange="this.form.submit()">
+                <option value="">All modes</option>
+                {% for m in modes %}
+                <option value="{{ m }}" {% if mode_filter == m %}selected{% endif %}>{{ m }}</option>
+                {% endfor %}
+            </select>
+            {% if cat_filter or mode_filter %}
+            <a href="{{ url_for('expenses.list_expenses') }}" class="filter-clear">Clear filters</a>
+            {% endif %}
+        </form>
+
+        <!-- Spreadsheet Table -->
+        {% if expenses %}
+        <div class="sheet-wrap">
+            <table class="sheet">
+                <thead>
+                    <tr>
+                        <th class="col-num">#</th>
+                        <th class="col-date">Date</th>
+                        <th class="col-title">Title</th>
+                        <th class="col-desc">Description</th>
+                        <th class="col-cat">Category</th>
+                        <th class="col-mode">Mode</th>
+                        <th class="col-amount">Amount</th>
+                        <th class="col-split">Split</th>
+                        <th class="col-context">Context</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for e in expenses %}
+                    <tr class="sheet-row {% if loop.even %}sheet-row--alt{% endif %}">
+                        <td class="col-num cell-muted">{{ loop.index }}</td>
+                        <td class="col-date">{{ e.date.strftime('%b %d, %Y') }}</td>
+                        <td class="col-title cell-bold">{{ e.title }}</td>
+                        <td class="col-desc cell-muted">{{ e.description or '—' }}</td>
+                        <td class="col-cat">
+                            <span class="tag">{{ e.category }}</span>
+                        </td>
+                        <td class="col-mode">
+                            <span class="tag tag--mode">{{ e.mode or '—' }}</span>
+                        </td>
+                        <td class="col-amount cell-num">${{ "%.2f"|format(e.amount) }}</td>
+                        <td class="col-split cell-num">
+                            {% if e.split %}
+                            ${{ "%.2f"|format(e.split) }}
+                            {% else %}
+                            <span class="cell-muted">—</span>
+                            {% endif %}
+                        </td>
+                        <td class="col-context">
+                            {% if e.split and e.split > 0 %}
+                                {% if e.mode.upper() == 'FRIEND' %}
+                                <span class="pill pill--owe">You owe</span>
+                                {% else %}
+                                <span class="pill pill--owed">Friend owes</span>
+                                {% endif %}
+                            {% else %}
+                            <span class="cell-muted">—</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+                <tfoot>
+                    <tr class="sheet-footer">
+                        <td colspan="6" class="footer-label">Total ({{ expenses|length }} rows)</td>
+                        <td class="col-amount cell-num footer-total">
+                            ${{ "%.2f"|format(expenses|sum(attribute='amount')) }}
+                        </td>
+                        <td class="col-split cell-num footer-total">
+                            ${{ "%.2f"|format(expenses|sum(attribute='split')) }}
+                        </td>
+                        <td></td>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
+        {% else %}
+        <div class="dashboard-empty">
+            <div class="empty-icon">◎</div>
+            <h2 class="empty-title">
+                {% if cat_filter or mode_filter %}No expenses match your filters{% else %}No expenses yet{% endif %}
+            </h2>
+            <p class="empty-body">
+                {% if cat_filter or mode_filter %}
+                    <a href="{{ url_for('expenses.list_expenses') }}">Clear filters</a> or add a new expense.
+                {% else %}
+                    Start tracking by adding your first expense.
+                {% endif %}
+            </p>
+            {% if not cat_filter and not mode_filter %}
+            <a href="{{ url_for('expenses.add_expense') }}" class="btn-primary">Add your first expense</a>
+            {% endif %}
+        </div>
+        {% endif %}
+
+    </div>
+</section>
+
+{% endblock %}

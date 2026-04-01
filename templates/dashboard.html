@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard — Balance Desk{% endblock %}
+
+{% block content %}
+
+<section class="dashboard">
+    <div class="dashboard-inner">
+
+        <div class="dashboard-header">
+            <div>
+                <p class="dashboard-greeting">Good day,</p>
+                <h1 class="dashboard-name">{{ current_user.name }}</h1>
+            </div>
+            <a href="{{ url_for('expenses.add_expense') }}" class="btn-primary">+ Add expense</a>
+        </div>
+
+        <div class="dashboard-stats">
+            <div class="stat-card">
+                <p class="stat-label">Total this month</p>
+                <p class="stat-value">${{ "%.2f"|format(total_month) }}</p>
+            </div>
+            <div class="stat-card">
+                <p class="stat-label">Transactions</p>
+                <p class="stat-value">{{ transactions }}</p>
+            </div>
+            <div class="stat-card">
+                <p class="stat-label">Top category</p>
+                <p class="stat-value {% if not top_category %}stat-value--muted{% endif %}">
+                    {{ top_category or '—' }}
+                </p>
+            </div>
+        </div>
+
+        {% if transactions == 0 %}
+        <div class="dashboard-empty">
+            <div class="empty-icon">◎</div>
+            <h2 class="empty-title">No expenses yet</h2>
+            <p class="empty-body">Start tracking by adding your first expense.</p>
+            <a href="{{ url_for('expenses.add_expense') }}" class="btn-primary">Add your first expense</a>
+        </div>
+        {% else %}
+        <div class="dashboard-actions">
+            <a href="{{ url_for('expenses.list_expenses') }}" class="btn-ghost">View all expenses &rarr;</a>
+        </div>
+        {% endif %}
+
+    </div>
+</section>
+
+{% endblock %}

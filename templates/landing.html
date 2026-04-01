@@ -17,51 +17,58 @@
             one transaction at a time.
         </p>
         <div class="hero-actions">
-            <a href="{{ url_for('register') }}" class="btn-primary">Start tracking free</a>
-            <a href="{{ url_for('login') }}" class="btn-ghost">Sign in</a>
+            <a href="{{ url_for('auth.register') }}" class="btn-primary">Start tracking free</a>
+            <a href="#" class="btn-ghost" id="how-it-works-btn">How it works</a>
         </div>
     </div>
     <div class="hero-visual">
         <div class="mock-card">
             <div class="mock-card-header">
-                <span class="mock-label">March 2026</span>
-                <span class="mock-total">₹12,450</span>
+                <span class="mock-label">{{ now.strftime("%B %Y") }}</span>
+                <span class="mock-total">$3,850</span>
             </div>
             <div class="mock-bars">
                 <div class="mock-bar-row">
                     <span class="mock-cat">Bills</span>
                     <div class="mock-bar-track">
-                        <div class="mock-bar" style="width: 72%"></div>
+                        <div class="mock-bar" style="width: 65%"></div>
                     </div>
-                    <span class="mock-amt">₹4,500</span>
+                    <span class="mock-amt">$1,600</span>
                 </div>
                 <div class="mock-bar-row">
                     <span class="mock-cat">Food</span>
                     <div class="mock-bar-track">
-                        <div class="mock-bar mock-bar-2" style="width: 52%"></div>
+                        <div class="mock-bar mock-bar-2" style="width: 45%"></div>
                     </div>
-                    <span class="mock-amt">₹3,200</span>
+                    <span class="mock-amt">$900</span>
                 </div>
                 <div class="mock-bar-row">
-                    <span class="mock-cat">Health</span>
+                    <span class="mock-cat">Shopping</span>
                     <div class="mock-bar-track">
-                        <div class="mock-bar mock-bar-3" style="width: 33%"></div>
+                        <div class="mock-bar mock-bar-3" style="width: 25%"></div>
                     </div>
-                    <span class="mock-amt">₹2,050</span>
+                    <span class="mock-amt">$500</span>
                 </div>
                 <div class="mock-bar-row">
                     <span class="mock-cat">Transport</span>
                     <div class="mock-bar-track">
-                        <div class="mock-bar mock-bar-4" style="width: 28%"></div>
+                        <div class="mock-bar mock-bar-4" style="width: 22%"></div>
                     </div>
-                    <span class="mock-amt">₹1,800</span>
+                    <span class="mock-amt">$450</span>
                 </div>
+                <div class="mock-bar-row">
+                    <span class="mock-cat">Health</span>
+                    <div class="mock-bar-track">
+                        <div class="mock-bar mock-bar-5" style="width: 20%"></div>
+                    </div>
+                <span class="mock-amt">$400</span>
+            </div>
             </div>
         </div>
     </div>
 </section>
 
-<section class="features">
+<section class="features" id="features">
     <div class="features-inner">
         <div class="feature-card">
             <div class="feature-icon">$</div>
@@ -85,8 +92,59 @@
     <div class="cta-inner">
         <h2 class="cta-title">Ready to take control?</h2>
         <p class="cta-body">Join thousands of people who track their expenses with Balance Desk.</p>
-        <a href="{{ url_for('register') }}" class="btn-primary">Create free account</a>
+        <a href="{{ url_for('auth.register') }}" class="btn-primary">Create free account</a>
     </div>
 </section>
 
+<!-- Video Modal -->
+<div class="modal-backdrop" id="video-modal" aria-hidden="true">
+    <div class="modal-box">
+        <button class="modal-close" id="modal-close-btn" aria-label="Close">&times;</button>
+        <div class="modal-video-wrap">
+            <iframe
+                id="yt-iframe"
+                src=""
+                data-src="https://www.youtube.com/embed/-iSk-usAlFU?si=UsZGYwT0xPU16FRC&enablejsapi=1"
+                title="How Balance Desk works"
+                frameborder="0"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                allowfullscreen>
+            </iframe>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+    const modal    = document.getElementById('video-modal');
+    const iframe   = document.getElementById('yt-iframe');
+    const openBtn  = document.getElementById('how-it-works-btn');
+    const closeBtn = document.getElementById('modal-close-btn');
+
+    function openModal(e) {
+        e.preventDefault();
+        iframe.src = iframe.dataset.src;
+        modal.classList.add('is-open');
+        modal.setAttribute('aria-hidden', 'false');
+    }
+
+    function closeModal() {
+        iframe.src = '';
+        modal.classList.remove('is-open');
+        modal.setAttribute('aria-hidden', 'true');
+    }
+
+    openBtn.addEventListener('click', openModal);
+    closeBtn.addEventListener('click', closeModal);
+
+    modal.addEventListener('click', function (e) {
+        if (e.target === modal) closeModal();
+    });
+
+    document.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape' && modal.classList.contains('is-open')) closeModal();
+    });
+</script>
 {% endblock %}

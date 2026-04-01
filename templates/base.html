@@ -4,9 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}Balance Desk{% endblock %}</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
     {% block head %}{% endblock %}
 </head>
@@ -14,16 +11,31 @@
 
     <nav class="navbar">
         <div class="nav-inner">
-            <a href="{{ url_for('landing') }}" class="nav-brand">
+            <a href="{{ url_for('main.landing') }}" class="nav-brand">
                 <span class="brand-icon">◈</span>
                 <span class="brand-name">Balance Desk</span>
             </a>
             <div class="nav-links">
-                <a href="{{ url_for('login') }}">Sign in</a>
-                <a href="{{ url_for('register') }}" class="nav-cta">Get started</a>
+                {% if current_user %}
+                    <a href="{{ url_for('main.dashboard') }}">Dashboard</a>
+                    <a href="{{ url_for('auth.logout') }}" class="nav-cta">Sign out</a>
+                {% else %}
+                    <a href="{{ url_for('auth.login') }}">Sign in</a>
+                    <a href="{{ url_for('auth.register') }}" class="nav-cta">Get started</a>
+                {% endif %}
             </div>
         </div>
     </nav>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            <div class="flash-container">
+                {% for category, message in messages %}
+                    <div class="flash flash--{{ category }}">{{ message }}</div>
+                {% endfor %}
+            </div>
+        {% endif %}
+    {% endwith %}
 
     <main class="main-content">
         {% block content %}{% endblock %}
@@ -34,6 +46,11 @@
             <span class="brand-icon">◈</span>
             <span class="footer-name">Balance Desk</span>
             <p class="footer-copy">Track every dollar. Own your finances.</p>
+            <div class="footer-links">
+                <a href="{{ url_for('main.terms') }}">Terms and Conditions</a>
+                <a href="{{ url_for('main.privacy') }}">Privacy Policy</a>
+            </div>
+            <p class="footer-copy">&copy; 2026 Balance Desk. All rights reserved.</p>
         </div>
     </footer>
 

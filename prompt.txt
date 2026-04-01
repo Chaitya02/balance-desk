@@ -1,0 +1,106 @@
+Implement the "Add Expense" feature in my Flask app using the EXACT structure from my Excel tracking format.
+
+IMPORTANT:
+- Follow the schema exactly as described
+- Each expense belongs to a logged-in user
+- Keep UI clean and similar to a spreadsheet-style input
+
+----------------------------------
+
+1. DATABASE MODEL (MATCH MY FORMAT)
+
+Create an Expense model with:
+
+- id (primary key) → Sr. No.
+- user_id (foreign key)
+
+- date (date) → "Date"
+- title (string) → "Title" (e.g., Starbucks, Walmart)
+- description (string) → "Description"
+
+- category (string) → "Category" (Eating out, Grocery, etc.)
+- mode (string) → "Mode" (AMEX, FREEDOM RISE, FRIEND)
+
+- amount (float) → "Amount"
+- split (float) → "Split" (amount you owe/pay)
+
+- created_at (timestamp)
+
+----------------------------------
+
+2. ADD EXPENSE FORM (/add-expense)
+
+Fields (same as your Excel):
+
+- Date (default = today)
+- Title (text)
+- Description (text)
+- Category (dropdown)
+    - I can create new
+
+- Mode (dropdown)
+    - I can create new
+
+- Amount (number)
+- Split (number)
+
+Validation:
+- Amount > 0
+- Split <= Amount
+- Required: date, title, category, amount
+
+----------------------------------
+
+3. SMART LOGIC (IMPORTANT)
+
+- If Mode = "FRIEND":
+    → Split represents what YOU owe
+- If Mode = anything else:
+    → Split represents what FRIEND owes you
+
+(This will be useful later for Splitwise feature)
+
+
+4. SUMMARY SECTION (TOP)
+
+Show:
+- Total Spent
+- Transactions
+- Top Category
+- Total You Owe
+- Total You Are Owed
+
+----------------------------------
+
+5. UI DESIGN
+
+- Make it look like a modern spreadsheet
+- Use:
+  - clean borders
+  - alternating row colors
+  - hover highlight
+
+----------------------------------
+
+6. ROUTES
+
+- /add-expense (GET, POST)
+- /expenses (GET)
+
+----------------------------------
+
+7. BONUS (if possible)
+
+- Add quick "Add Row" UX (like Excel feel)
+- Add filter:
+    - by category
+    - by mode
+
+----------------------------------
+
+RETURN:
+
+- Updated models.py
+- routes/expenses.py
+- add_expense.html
+- expenses.html
