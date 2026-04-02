@@ -12,8 +12,10 @@ class User(db.Model):
     email         = db.Column(db.String(150), unique=True, nullable=False)
     password_hash = db.Column(db.String(256), nullable=True)   # null for OAuth-only accounts
     google_id     = db.Column(db.String(128), unique=True, nullable=True)
-    avatar_url    = db.Column(db.String(512), nullable=True)
-    created_at    = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+    avatar_url         = db.Column(db.String(512), nullable=True)
+    is_verified        = db.Column(db.Boolean, default=False, nullable=False, server_default='1')
+    verification_token = db.Column(db.String(64), nullable=True)
+    created_at         = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
 
     expenses = db.relationship('Expense', backref='user', lazy='dynamic',
                                order_by='Expense.date.desc()')

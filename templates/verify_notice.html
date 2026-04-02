@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+
+{% block title %}Verify your email — Balance Desk{% endblock %}
+
+{% block content %}
+
+<section class="auth-section">
+    <div class="auth-container">
+
+        <div class="auth-header">
+            <h1 class="auth-title">Check your inbox</h1>
+            <p class="auth-subtitle">A verification link has been sent to your email</p>
+        </div>
+
+        <div class="auth-card" style="text-align:center;">
+            <div style="font-size:48px;margin-bottom:16px;">✉️</div>
+
+            {% if email %}
+            <p style="color:#555;font-size:15px;margin:0 0 8px;">
+                We sent a verification link to
+            </p>
+            <p style="color:#1a1a1a;font-weight:600;font-size:15px;margin:0 0 24px;">{{ email }}</p>
+            {% else %}
+            <p style="color:#555;font-size:15px;margin:0 0 24px;">
+                Click the link in the email to activate your account.
+            </p>
+            {% endif %}
+
+            <p style="color:#777;font-size:13px;margin:0 0 24px;line-height:1.6;">
+                Didn't receive it? Check your spam folder, or resend the link below.
+            </p>
+
+            <form method="POST" action="{{ url_for('auth.resend_verification') }}">
+                <input type="hidden" name="email" value="{{ email or '' }}">
+                <button type="submit" class="btn-submit">Resend verification email</button>
+            </form>
+        </div>
+
+        <p class="auth-switch">
+            Wrong account?
+            <a href="{{ url_for('auth.login') }}">Sign in with a different email</a>
+        </p>
+
+    </div>
+</section>
+
+{% endblock %}
