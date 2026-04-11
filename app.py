@@ -1,9 +1,9 @@
 import os
+import resend
 from dotenv import load_dotenv
 load_dotenv()
 
 from flask import Flask, session
-from flask_mail import Mail
 from werkzeug.middleware.proxy_fix import ProxyFix
 from authlib.integrations.flask_client import OAuth
 from models import db, User
@@ -12,7 +12,6 @@ from routes.main import main_bp
 from routes.expenses import expenses_bp
 
 oauth = OAuth()
-mail = Mail()
 
 
 def create_app():
@@ -27,17 +26,11 @@ def create_app():
     app.config['GOOGLE_CLIENT_ID']     = os.environ.get('GOOGLE_CLIENT_ID', '')
     app.config['GOOGLE_CLIENT_SECRET'] = os.environ.get('GOOGLE_CLIENT_SECRET', '')
 
-    # Flask-Mail config
-    app.config['MAIL_SERVER']   = 'smtp.gmail.com'
-    app.config['MAIL_PORT']     = 587
-    app.config['MAIL_USE_TLS']  = True
-    app.config['MAIL_USERNAME'] = 'balancedesk.verify@gmail.com'
-    app.config['MAIL_PASSWORD'] = os.environ.get('EMAIL_PASSWORD', '')
-    app.config['MAIL_DEFAULT_SENDER'] = ('Balance Desk', 'balancedesk.verify@gmail.com')
+    # Resend config
+    resend.api_key = os.environ.get('RESEND_API_KEY', '')
 
     db.init_app(app)
     oauth.init_app(app)
-    mail.init_app(app)
 
     oauth.register(
         name='google',
@@ -47,10 +40,8 @@ def create_app():
         client_kwargs={'scope': 'openid email profile'},
     )
 
-    # Make oauth and mail accessible inside blueprints
-    # Note: use 'mailer' key — Flask-Mail already owns 'mail' for its internal state
-    app.extensions['oauth']  = oauth
-    app.extensions['mailer'] = mail
+    # Make oauth accessible inside blueprints
+    app.extensions['oauth'] = oauth
 
     app.register_blueprint(auth_bp)
     app.register_blueprint(main_bp)
@@ -76,4 +67,4 @@ app = create_app()
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5001))
-    app.run(debug=False, port=port)
+    app.run(debug=True, port=port)

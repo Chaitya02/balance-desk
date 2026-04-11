@@ -1,8 +1,8 @@
 import re
 import secrets
 import threading
+import resend
 from flask import Blueprint, render_template, request, redirect, url_for, session, flash, current_app
-from flask_mail import Message
 from werkzeug.security import generate_password_hash, check_password_hash
 from models import db, User
 from utils import login_required
@@ -18,13 +18,9 @@ def _send_verification_email(user):
     db.session.commit()
 
     verify_url = url_for('auth.verify_email', token=token, _external=True)
-    app  = current_app._get_current_object()
-    mail = app.extensions['mailer']
-    msg = Message(
-        subject='Verify your Balance Desk email',
-        recipients=[user.email],
-    )
-    msg.html = f"""
+    app = current_app._get_current_object()
+
+    html = f"""
     <!DOCTYPE html>
     <html>
     <body style="margin:0;padding:0;background:#f4f6f9;font-family:Arial,sans-serif;">
@@ -68,9 +64,15 @@ def _send_verification_email(user):
     </body>
     </html>
     """
+
     def _send():
         with app.app_context():
-            mail.send(msg)
+            resend.Emails.send({
+                "from": "Balance Desk <noreply@verify.chaityadobariya.me>",
+                "to": [user.email],
+                "subject": "Verify your Balance Desk email",
+                "html": html,
+            })
 
     threading.Thread(target=_send, daemon=True).start()
 
