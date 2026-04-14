@@ -31,14 +31,16 @@ def dashboard():
         return not e.mode or e.mode.lower() in pm_lc
 
     def my_spend(e):
-        return e.split if e.split else e.amount
+        return e.amount if e.split is None else e.split
 
     total_month  = round(sum(my_spend(e) for e in month_expenses), 2)
     transactions = len(month_expenses)
-    friend_owes  = round(sum(e.amount - e.split
-                             for e in month_expenses
-                             if paid_by_me(e) and e.split and e.split < e.amount), 2)
-    you_owe      = round(sum(my_spend(e) for e in month_expenses if not paid_by_me(e)), 2)
+    friend_owes  = round(sum(
+        e.amount - e.split
+        for e in month_expenses
+        if e.paid_by_user and e.split is not None and e.split < e.amount
+    ), 2)
+    you_owe      = round(sum(my_spend(e) for e in month_expenses if not e.paid_by_user and e.split is not None), 2)
 
     cat_totals = {}
     for e in month_expenses:

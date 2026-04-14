@@ -95,6 +95,8 @@
                         <label>Paid by</label>
                         <input type="hidden" id="mode" name="mode"
                                value="{{ form.get('mode', expense.mode or '') }}">
+                        <input type="hidden" id="paid-by-user" name="paid_by_user"
+                               value="{{ form.get('paid_by_user', '1' if expense.paid_by_user else '0') }}">
                         <div class="paid-by-wrap" id="paid-by-wrap" data-payment-methods="{{ payment_methods | tojson | e }}">
                             <div class="paid-toggle-group">
                                 <button type="button" id="paid-me-btn" class="paid-toggle-btn paid-toggle-btn--active" onclick="setPaidBy('Me')">
@@ -138,14 +140,14 @@
                                 My Split ($)
                                 <span class="split-info" aria-label="Split info">
                                     <svg width="13" height="13" viewBox="0 0 13 13" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"><circle cx="6.5" cy="6.5" r="5.5"/><path d="M6.5 6v3M6.5 4h.01"/></svg>
-                                    <span class="split-info-tip">Your actual share of this expense.<br>Leave blank → defaults to the full amount.<br>Enter less if someone else covered part of it.</span>
+                                    <span class="split-info-tip">Your share of this expense.<br>Leave blank → full expense is yours.<br>Enter 0 → you paid, friend owes the full amount.<br>Enter an amount → friend owes the difference.</span>
                                 </span>
                             </span>
                             <span class="split-hint" id="split-hint">—</span>
                         </label>
                         <input type="number" id="split" name="split" class="form-input"
                                min="0" step="0.01" placeholder="Full amount (default)"
-                               value="{{ form.get('split', expense.split or '') }}">
+                               value="{{ form.get('split', ('' if expense.split is none else expense.split)) }}">
                     </div>
 
                 </div>
@@ -233,10 +235,9 @@ document.getElementById('description').addEventListener('blur', function () {
     this.value = v ? v.charAt(0).toUpperCase() + v.slice(1).toLowerCase() : '';
 });
 
-const PM_LC = JSON.parse(document.getElementById('paid-by-wrap').dataset.paymentMethods).map(m => m.toLowerCase());
-
 function setPaidBy(val) {
     const modeHidden = document.getElementById('mode');
+    const pbuHidden  = document.getElementById('paid-by-user');
     const pmField    = document.getElementById('payment-method-field');
     const payerField = document.getElementById('paid-payer-field');
     const pmInput    = document.getElementById('payment-method-input');
@@ -249,13 +250,15 @@ function setPaidBy(val) {
         meBtn.classList.add('paid-toggle-btn--active');
         otherBtn.classList.remove('paid-toggle-btn--active');
         modeHidden.value = pmInput.value.trim();
+        pbuHidden.value  = '1';
     } else {
         pmField.style.display    = 'none';
         payerField.style.display = '';
         meBtn.classList.remove('paid-toggle-btn--active');
         otherBtn.classList.add('paid-toggle-btn--active');
         payerInput.focus();
-        modeHidden.value = normalizePayer(payerInput.value);
+        modeHidden.value = payerInput.value.trim();
+        pbuHidden.value  = '0';
     }
     updateSplitHint();
 }
@@ -267,34 +270,35 @@ document.getElementById('payment-method-input').addEventListener('blur', functio
     this.value = words.map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ');
     document.getElementById('mode').value = this.value;
 });
-function normalizePayer(v) {
-    return v.trim().split(/\s+/).map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join('');
-}
 document.getElementById('payer-name').addEventListener('input', function () {
-    document.getElementById('mode').value = normalizePayer(this.value) || '';
+    document.getElementById('mode').value = this.value.trim();
     updateSplitHint();
 });
 document.getElementById('payer-name').addEventListener('blur', function () {
-    const formatted = normalizePayer(this.value);
-    this.value = formatted;
-    document.getElementById('mode').value = formatted || '';
+    const words = this.value.trim().replace(/\s+/g, ' ').split(' ');
+    this.value = words.map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ');
+    document.getElementById('mode').value = this.value;
     updateSplitHint();
 });
 
 function updateSplitHint() {
-    const val  = document.getElementById('mode').value;
     const hint = document.getElementById('split-hint');
     if (!hint) return;
-    const isPM = !val || PM_LC.includes(val.toLowerCase());
-    if (isPM) { hint.textContent = '—'; hint.className = 'split-hint'; }
-    else { hint.textContent = `you owe ${val}`; hint.className = 'split-hint split-hint--owe'; }
+    const isMe = document.getElementById('paid-by-user').value === '1';
+    if (isMe) { hint.textContent = '—'; hint.className = 'split-hint'; }
+    else {
+        const payer = document.getElementById('payer-name').value.trim();
+        hint.textContent = payer ? `you owe ${payer}` : 'you owe them';
+        hint.className = 'split-hint split-hint--owe';
+    }
 }
 
 (function () {
-    const catVal  = document.getElementById('category').value;
-    const modeVal = document.getElementById('mode').value;
+    const catVal   = document.getElementById('category').value;
+    const modeVal  = document.getElementById('mode').value;
+    const paidByMe = document.getElementById('paid-by-user').value === '1';
     if (catVal) cselectPick('cat-cselect', 'category', catVal);
-    if (modeVal && !PM_LC.includes(modeVal.toLowerCase())) {
+    if (!paidByMe) {
         document.getElementById('payer-name').value = modeVal;
         setPaidBy('other');
     } else {

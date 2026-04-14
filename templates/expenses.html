@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block title %}{{ month_name }} {{ year }} — Expenses{% endblock %}
+{% block title %}{{ month_name }} {{ year }} Expenses — Balance Desk{% endblock %}
 
 {% block content %}
 
@@ -106,18 +106,17 @@
                             {{ e.category }}
                         </td>
                         <td class="col-mode">
-                            <span class="mode-badge">{{ e.mode or '—' }}</span>
+                            <span class="mode-badge">{{ e.mode.title() if e.mode else '—' }}</span>
                         </td>
                         <td class="col-amount cell-num">${{ "%.2f"|format(e.amount) }}</td>
                         <td class="col-split cell-num cell-muted">
-                            {% if e.split %}${{ "%.2f"|format(e.split) }}{% else %}—{% endif %}
+                            {% if e.split is not none %}${{ "%.2f"|format(e.split) }}{% else %}—{% endif %}
                         </td>
                         <td class="col-context">
-                            {% set by_me = (not e.mode) or (e.mode.lower() in payment_methods_lc) %}
-                            {% if not by_me and e.split and e.split > 0 %}
+                            {% if e.paid_by_user and e.split is not none and e.split < e.amount %}
+                                <span class="pill pill--owed">You are owed</span>
+                            {% elif not e.paid_by_user and e.split is not none and e.split > 0 %}
                                 <span class="pill pill--owe">You owe</span>
-                            {% elif by_me and e.split and e.split > 0 and e.split < e.amount %}
-                                <span class="pill pill--owed">Friend owes</span>
                             {% else %}
                                 <span class="cell-muted">—</span>
                             {% endif %}
@@ -137,7 +136,7 @@
                 </tbody>
                 <tfoot>
                     {% set ns = namespace(my_spend_total=0) %}
-                    {% for e in expenses %}{% set ns.my_spend_total = ns.my_spend_total + (e.split if e.split else e.amount) %}{% endfor %}
+                    {% for e in expenses %}{% set ns.my_spend_total = ns.my_spend_total + (e.amount if e.split is none else e.split) %}{% endfor %}
                     <tr class="sheet-footer">
                         <td colspan="4" class="footer-label">{{ expenses|length }} expense{{ 's' if expenses|length != 1 }}</td>
                         <td class="col-amount cell-num footer-total">${{ "%.2f"|format(expenses|sum(attribute='amount')) }}</td>
@@ -187,7 +186,7 @@
                             <div class="split-stat-bar-owed" style="width:{{ ((friend_owes / split_total * 100) | round | int) if split_total else 0 }}%"></div>
                         </div>
                         <div class="split-stat-row">
-                            <span class="split-stat-label">Friend owes you</span>
+                            <span class="split-stat-label">You are owed</span>
                             <span class="split-stat-value split-stat-value--owed">${{ "%.2f"|format(friend_owes) }}</span>
                         </div>
                         {% if you_owe == 0 and friend_owes == 0 %}

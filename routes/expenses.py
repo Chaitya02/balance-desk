@@ -34,23 +34,21 @@ def _user_options(field):
 
 
 def _payer_names():
-    """Return distinct payer names (mode values that are not payment methods)."""
-    pm_lc = {m.lower() for m in DEFAULT_PAYMENT_METHODS}
+    """Return distinct payer names (expenses where someone else paid)."""
     rows = (db.session.query(Expense.mode)
-            .filter_by(user_id=session['user_id'])
+            .filter_by(user_id=session['user_id'], paid_by_user=False)
             .distinct()
             .all())
-    return [r[0] for r in rows if r[0] and r[0].lower() not in pm_lc]
+    return [r[0] for r in rows if r[0]]
 
 
 def _used_payment_methods():
-    """Return payment methods previously used by current user; falls back to defaults for new users."""
-    pm_lc = {m.lower() for m in DEFAULT_PAYMENT_METHODS}
+    """Return payment methods used by current user; falls back to defaults for new users."""
     rows = (db.session.query(Expense.mode)
-            .filter_by(user_id=session['user_id'])
+            .filter_by(user_id=session['user_id'], paid_by_user=True)
             .distinct()
             .all())
-    used = [r[0] for r in rows if r[0] and r[0].lower() in pm_lc]
+    used = [r[0] for r in rows if r[0]]
     return used if used else list(DEFAULT_PAYMENT_METHODS)
 
 
@@ -90,24 +88,20 @@ def list_expenses():
 
     expenses = q.all()
 
-    # Helper: was this expense paid by me (vs someone else)?
-    pm_lc = {m.lower() for m in DEFAULT_PAYMENT_METHODS}
-
-    def paid_by_me(e):
-        return not e.mode or e.mode.lower() in pm_lc
-
     def my_spend(e):
-        """My actual share: split if set, else the full amount."""
-        return e.split if e.split else e.amount
+        """My actual share: split if explicitly set, else the full amount."""
+        return e.amount if e.split is None else e.split
 
     # Summary stats
     total_spent = round(sum(my_spend(e) for e in expenses), 2)
-    # I paid but friend owes me the rest
-    friend_owes = round(sum(e.amount - e.split
-                            for e in expenses
-                            if paid_by_me(e) and e.split and e.split < e.amount), 2)
+    # I paid; friend owes the rest (or full amount when split=0)
+    friend_owes = round(sum(
+        e.amount - e.split
+        for e in expenses
+        if e.paid_by_user and e.split is not None and e.split < e.amount
+    ), 2)
     # Someone else paid; I owe them my share
-    you_owe     = round(sum(my_spend(e) for e in expenses if not paid_by_me(e)), 2)
+    you_owe     = round(sum(my_spend(e) for e in expenses if not e.paid_by_user and e.split is not None), 2)
 
     # Chart data (use my_spend for accurate personal spend by category)
     cat_totals  = {}
@@ -154,7 +148,6 @@ def list_expenses():
         mode_totals_json=json.dumps(mode_totals),
         you_owe=you_owe,
         friend_owes=friend_owes,
-        payment_methods_lc=[m.lower() for m in DEFAULT_PAYMENT_METHODS],
     )
 
 
@@ -168,20 +161,21 @@ def add_expense():
     user_id    = session['user_id']
 
     if request.method == 'POST':
-        exp_date    = request.form.get('date', '').strip()
-        title       = ' '.join(request.form.get('title', '').split()).title()
-        desc_raw    = ' '.join(request.form.get('description', '').split())
-        description = (desc_raw[0].upper() + desc_raw[1:].lower()) if desc_raw else ''
-        category    = request.form.get('category', '').strip()
-        mode_raw    = ''.join(w.capitalize() for w in request.form.get('mode', 'Me').split())
-        mode        = mode_raw if mode_raw else 'Me'
-        amount_raw  = request.form.get('amount', '').strip()
-        split_raw   = request.form.get('split', '0').strip() or '0'
+        exp_date      = request.form.get('date', '').strip()
+        title         = ' '.join(request.form.get('title', '').split()).title()
+        desc_raw      = ' '.join(request.form.get('description', '').split())
+        description   = (desc_raw[0].upper() + desc_raw[1:].lower()) if desc_raw else ''
+        category      = request.form.get('category', '').strip()
+        paid_by_user  = request.form.get('paid_by_user', '1') == '1'
+        mode_raw      = ' '.join(request.form.get('mode', '').split())
+        mode          = mode_raw if mode_raw else ('Cash' if paid_by_user else '')
+        amount_raw    = request.form.get('amount', '').strip()
+        split_raw     = request.form.get('split', '').strip()
 
         error = None
         try:
             amount = float(amount_raw)
-            split  = float(split_raw)
+            split  = float(split_raw) if split_raw != '' else None
         except ValueError:
             error = 'Amount and Split must be valid numbers.'
 
@@ -190,9 +184,9 @@ def add_expense():
                 error = 'Date, Title, and Category are required.'
             elif amount <= 0:
                 error = 'Amount must be greater than 0.'
-            elif split < 0:
+            elif split is not None and split < 0:
                 error = 'My Split cannot be negative.'
-            elif split > amount:
+            elif split is not None and split > amount:
                 error = 'My Split cannot exceed the total Amount.'
 
         if error:
@@ -212,6 +206,7 @@ def add_expense():
             mode=mode,
             amount=amount,
             split=split,
+            paid_by_user=paid_by_user,
         )
         db.session.add(expense)
         db.session.commit()
@@ -241,20 +236,21 @@ def edit_expense(expense_id):
     expense = Expense.query.filter_by(id=expense_id, user_id=user_id).first_or_404()
 
     if request.method == 'POST':
-        exp_date    = request.form.get('date', '').strip()
-        title       = ' '.join(request.form.get('title', '').split()).title()
-        desc_raw    = ' '.join(request.form.get('description', '').split())
-        description = (desc_raw[0].upper() + desc_raw[1:].lower()) if desc_raw else ''
-        category    = request.form.get('category', '').strip()
-        mode_raw    = ''.join(w.capitalize() for w in request.form.get('mode', 'Me').split())
-        mode        = mode_raw if mode_raw else 'Me'
-        amount_raw  = request.form.get('amount', '').strip()
-        split_raw   = request.form.get('split', '0').strip() or '0'
+        exp_date      = request.form.get('date', '').strip()
+        title         = ' '.join(request.form.get('title', '').split()).title()
+        desc_raw      = ' '.join(request.form.get('description', '').split())
+        description   = (desc_raw[0].upper() + desc_raw[1:].lower()) if desc_raw else ''
+        category      = request.form.get('category', '').strip()
+        paid_by_user  = request.form.get('paid_by_user', '1') == '1'
+        mode_raw      = ' '.join(request.form.get('mode', '').split())
+        mode          = mode_raw if mode_raw else ('Cash' if paid_by_user else '')
+        amount_raw    = request.form.get('amount', '').strip()
+        split_raw     = request.form.get('split', '').strip()
 
         error = None
         try:
             amount = float(amount_raw)
-            split  = float(split_raw)
+            split  = float(split_raw) if split_raw != '' else None
         except ValueError:
             error = 'Amount and Split must be valid numbers.'
 
@@ -263,9 +259,9 @@ def edit_expense(expense_id):
                 error = 'Date, Title, and Category are required.'
             elif amount <= 0:
                 error = 'Amount must be greater than 0.'
-            elif split < 0:
+            elif split is not None and split < 0:
                 error = 'My Split cannot be negative.'
-            elif split > amount:
+            elif split is not None and split > amount:
                 error = 'My Split cannot exceed the total Amount.'
 
         if error:
@@ -277,13 +273,14 @@ def edit_expense(expense_id):
                                    payer_names=_payer_names(),
                                    form=request.form)
 
-        expense.date        = date.fromisoformat(exp_date)
-        expense.title       = title
-        expense.description = description
-        expense.category    = category
-        expense.mode        = mode
-        expense.amount      = amount
-        expense.split       = split
+        expense.date         = date.fromisoformat(exp_date)
+        expense.title        = title
+        expense.description  = description
+        expense.category     = category
+        expense.mode         = mode
+        expense.amount       = amount
+        expense.split        = split
+        expense.paid_by_user = paid_by_user
         db.session.commit()
 
         flash(f'Expense "{title}" updated successfully.', 'success')

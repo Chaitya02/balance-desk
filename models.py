@@ -37,20 +37,19 @@ class Expense(db.Model):
     category    = db.Column(db.String(100), nullable=False)          # Category
     mode        = db.Column(db.String(100), nullable=False, default='') # Mode
 
-    amount      = db.Column(db.Float, nullable=False)                # Amount
-    split       = db.Column(db.Float, default=0.0)                   # Split
+    amount        = db.Column(db.Float, nullable=False)              # Amount
+    split         = db.Column(db.Float, nullable=True, default=None) # Split (None = full expense is mine)
+    paid_by_user  = db.Column(db.Boolean, nullable=False, default=True, server_default='1')
 
     created_at  = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
 
     @property
     def you_owe(self):
-        """Amount YOU owe — only when mode is FRIEND."""
-        return self.split if self.mode.upper() == 'FRIEND' else 0.0
+        return self.split if not self.paid_by_user and self.split is not None else 0.0
 
     @property
     def friend_owes(self):
-        """Amount FRIEND owes you — when mode is not FRIEND."""
-        return self.split if self.mode.upper() != 'FRIEND' and self.split else 0.0
+        return (self.amount - self.split) if self.paid_by_user and self.split is not None and self.split < self.amount else 0.0
 
     def __repr__(self):
         return f'<Expense {self.title} ${self.amount}>'

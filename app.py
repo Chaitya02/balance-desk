@@ -59,6 +59,15 @@ def create_app():
 
     with app.app_context():
         db.create_all()
+        # One-time migration: add paid_by_user column to existing databases
+        with db.engine.connect() as conn:
+            try:
+                conn.execute(db.text(
+                    "ALTER TABLE expenses ADD COLUMN paid_by_user BOOLEAN NOT NULL DEFAULT 1"
+                ))
+                conn.commit()
+            except Exception:
+                pass  # Column already exists
 
     return app
 
