@@ -1,0 +1,23 @@
+services:
+  - type: web
+    name: balance-desk
+    runtime: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn app:app --workers 2 --timeout 120
+    envVars:
+      - key: SECRET_KEY
+        generateValue: true          # Render auto-generates a secure random value
+      - key: DEBUG
+        value: false
+      - key: DATABASE_URL
+        value: sqlite:////data/balance_desk.db
+      - key: GOOGLE_CLIENT_ID
+        sync: false                  # Set manually in Render dashboard
+      - key: GOOGLE_CLIENT_SECRET
+        sync: false
+      - key: RESEND_API_KEY
+        sync: false
+    disk:
+      name: balance-desk-data
+      mountPath: /data
+      sizeGB: 1
