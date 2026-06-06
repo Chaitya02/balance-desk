@@ -47,23 +47,31 @@
         <!-- Yearly analytics chart -->
         <div class="analytics-section">
 
-            <div class="analytics-header">
-                <div>
-                    <h2 class="dashboard-section-title">{{ year }} Spending</h2>
+            <div class="analytics-header"
+                 data-current-year="{{ year }}"
+                 data-min-year="{{ min_year }}">
+                <div class="analytics-year-nav">
+                    <button class="chart-year-btn" id="chartPrevYear" aria-label="Previous year">
+                        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M10 3L6 8l4 5"/></svg>
+                    </button>
+                    <h2 class="dashboard-section-title" id="chartYearTitle">Spending Trend for {{ year }}</h2>
+                    <button class="chart-year-btn" id="chartNextYear" aria-label="Next year">
+                        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3l4 5-4 5"/></svg>
+                    </button>
                 </div>
                 <div class="analytics-header-stats">
                     <div class="analytics-hstat">
                         <span class="analytics-hstat-label">Year total</span>
-                        <span class="analytics-hstat-value">${{ "%.2f"|format(total_year) }}</span>
+                        <span class="analytics-hstat-value" id="chartYearTotal">${{ "%.2f"|format(total_year) }}</span>
                     </div>
                     <div class="analytics-hstat-divider"></div>
                     <div class="analytics-hstat">
                         <span class="analytics-hstat-label">Monthly avg</span>
-                        <span class="analytics-hstat-value">${{ "%.2f"|format(avg_month) }}</span>
+                        <span class="analytics-hstat-value" id="chartAvgMonth">${{ "%.2f"|format(avg_month) }}</span>
                     </div>
                     {% if month_change_pct is not none %}
-                    <div class="analytics-hstat-divider"></div>
-                    <div class="analytics-change {% if month_change_pct >= 0 %}analytics-change--up{% else %}analytics-change--down{% endif %}">
+                    <div class="analytics-hstat-divider" id="chartChangeDivider"></div>
+                    <div class="analytics-change {% if month_change_pct >= 0 %}analytics-change--up{% else %}analytics-change--down{% endif %}" id="chartMonthChange">
                         <span class="analytics-change-arrow">{{ '↑' if month_change_pct >= 0 else '↓' }}</span>
                         <span class="analytics-change-pct">{{ month_change_pct | abs }}%</span>
                         <span class="analytics-change-label">vs {{ prev_month_name }}</span>
@@ -82,7 +90,7 @@
                 </div>
 
                 <canvas id="yearlyChart"></canvas>
-                <p class="analytics-empty" id="chartEmpty"  style="display:none">No expenses recorded for {{ year }} yet.</p>
+                <p class="analytics-empty" id="chartEmpty"  style="display:none">No expenses recorded yet.</p>
                 <p class="analytics-empty" id="chartNoSel" style="display:none">Select categories above to view spending.</p>
 
                 <div class="analytics-footer" id="analyticsFooter" style="display:none">
@@ -110,6 +118,7 @@
                         <th class="col-cat">Category</th>
                         <th class="col-mode">Mode</th>
                         <th class="col-amount">Amount</th>
+                        <th class="col-split">My Split</th>
                         <th class="col-context">Status</th>
                     </tr>
                 </thead>
@@ -124,13 +133,18 @@
                             {% endif %}
                         </td>
                         <td class="col-cat">
-                            <span class="cat-dot cat-dot--{{ e.category | lower | replace(' ', '-') | replace('/', '-') }}"></span>
-                            {{ e.category }}
+                            <span class="cat-icon-badge" data-category="{{ e.category }}">
+                                <span class="cat-icon-svg"></span>
+                                <span class="cat-icon-label">{{ e.category }}</span>
+                            </span>
                         </td>
                         <td class="col-mode">
-                            <span class="mode-badge">{{ e.mode.title() if e.mode else '—' }}</span>
+                            <span class="mode-badge">{{ e.mode.upper() if e.mode else '—' }}</span>
                         </td>
                         <td class="col-amount cell-num">${{ "%.2f"|format(e.amount) }}</td>
+                        <td class="col-split cell-num cell-muted">
+                            {% if e.split is not none %}${{ "%.2f"|format(e.split) }}{% else %}—{% endif %}
+                        </td>
                         <td class="col-context">
                             {% if e.paid_by_user and e.split is not none and e.split < e.amount %}
                                 <span class="pill pill--owed">You are owed</span>
@@ -144,11 +158,15 @@
                     {% endfor %}
                 </tbody>
                 <tfoot>
-                    {% set ns = namespace(my_spend_total=0) %}
-                    {% for e in month_expenses %}{% set ns.my_spend_total = ns.my_spend_total + (e.amount if e.split is none else e.split) %}{% endfor %}
+                    {% set ns = namespace(amount_total=0, split_total=0) %}
+                    {% for e in month_expenses %}
+                        {% set ns.amount_total = ns.amount_total + e.amount %}
+                        {% set ns.split_total  = ns.split_total  + (e.amount if e.split is none else e.split) %}
+                    {% endfor %}
                     <tr class="sheet-footer">
                         <td colspan="4" class="footer-label">{{ month_expenses|length }} expense{{ 's' if month_expenses|length != 1 }}</td>
-                        <td class="col-amount cell-num footer-total" title="My total spend">${{ "%.2f"|format(ns.my_spend_total) }}</td>
+                        <td class="col-amount cell-num footer-total">${{ "%.2f"|format(ns.amount_total) }}</td>
+                        <td class="col-split cell-num footer-total">${{ "%.2f"|format(ns.split_total) }}</td>
                         <td></td>
                     </tr>
                 </tfoot>
@@ -169,15 +187,20 @@
 {% endblock %}
 
 {% block scripts %}
+<script src="{{ url_for('static', filename='js/cat_icons.js') }}"></script>
+<script>
+document.querySelectorAll('.cat-icon-badge[data-category]').forEach(el => {
+    const cat = el.dataset.category;
+    const color = catColor(cat);
+    el.querySelector('.cat-icon-svg').innerHTML = catIcon(cat);
+    el.style.background   = color + '1a';
+    el.style.color        = color;
+    el.style.borderColor  = color + '33';
+});
+</script>
 <script>
 (function () {
     const raw = {{ chart_data | safe }};
-
-    const PALETTE = [
-        '#1a472a','#b87320','#4a6fa5','#7b5ea7','#c0392b',
-        '#2e86ab','#a23b72','#e07b39','#3a7d44','#5c6bc0',
-        '#d4a017','#6d4c41','#00897b','#8d6e63','#546e7a'
-    ];
 
     const hasData = raw.datasets.some(ds => ds.some(v => v > 0));
     if (!hasData) {
@@ -190,8 +213,8 @@
     const datasets = raw.categories.map((cat, i) => ({
         label: cat,
         data: raw.datasets[i],
-        backgroundColor: PALETTE[i % PALETTE.length],
-        hoverBackgroundColor: PALETTE[i % PALETTE.length],
+        backgroundColor: catColor(cat),
+        hoverBackgroundColor: catColor(cat),
         borderRadius: 3,
         borderSkipped: false,
     }));
@@ -275,7 +298,7 @@
         const chip = document.createElement('span');
         chip.className   = 'analytics-legend-item analytics-legend-item--on';
         chip.dataset.idx = i;
-        chip.innerHTML   = `<span class="analytics-legend-dot" style="background:${PALETTE[i % PALETTE.length]}"></span>${cat}`;
+        chip.innerHTML   = `<span class="analytics-legend-dot" style="background:${catColor(cat)}"></span>${cat}`;
         chip.addEventListener('click', () => {
             const on = chip.classList.toggle('analytics-legend-item--on');
             chip.classList.toggle('analytics-legend-item--off', !on);
@@ -312,6 +335,84 @@
     });
 
     updateFooter();
+
+    /* ── Year navigation ────────────────────────────────── */
+    const analyticsHeader = document.querySelector('.analytics-header');
+    let   viewYear  = parseInt(analyticsHeader.dataset.currentYear);
+    const minYear   = parseInt(analyticsHeader.dataset.minYear);
+    const maxYear   = parseInt(analyticsHeader.dataset.currentYear);
+    const prevBtn   = document.getElementById('chartPrevYear');
+    const nextBtn   = document.getElementById('chartNextYear');
+
+    function syncNavBtns() {
+        prevBtn.disabled = viewYear <= minYear;
+        nextBtn.disabled = viewYear >= maxYear;
+        nextBtn.style.opacity = viewYear >= maxYear ? '0.3' : '1';
+        prevBtn.style.opacity = viewYear <= minYear ? '0.3' : '1';
+    }
+    syncNavBtns();
+
+    async function loadYear(year) {
+        prevBtn.disabled = nextBtn.disabled = true;
+        try {
+            const res  = await fetch(`/api/chart-data/${year}`);
+            const data = await res.json();
+
+            // Rebuild datasets
+            const newDatasets = data.categories.map(cat => ({
+                label:               cat,
+                data:                data.datasets[data.categories.indexOf(cat)],
+                backgroundColor:     catColor(cat),
+                hoverBackgroundColor:catColor(cat),
+                borderRadius:        3,
+                borderSkipped:       false,
+            }));
+            chart.data.datasets = newDatasets;
+            chart.update();
+
+            // Rebuild legend
+            legendEl.innerHTML = '';
+            data.categories.forEach(cat => {
+                const chip = document.createElement('span');
+                chip.className   = 'analytics-legend-item analytics-legend-item--on';
+                chip.innerHTML   = `<span class="analytics-legend-dot" style="background:${catColor(cat)}"></span>${cat}`;
+                chip.addEventListener('click', () => {
+                    const on = chip.classList.toggle('analytics-legend-item--on');
+                    chip.classList.toggle('analytics-legend-item--off', !on);
+                    const idx = chart.data.datasets.findIndex(d => d.label === cat);
+                    if (idx !== -1) { chart.setDatasetVisibility(idx, on); chart.update(); }
+                    updateFooter();
+                });
+                legendEl.appendChild(chip);
+            });
+
+            // Update stats
+            document.getElementById('chartYearTitle').textContent = `Spending Trend for ${data.year}`;
+            document.getElementById('chartYearTotal').textContent = '$' + data.total_year.toFixed(2);
+            document.getElementById('chartAvgMonth').textContent  = '$' + data.avg_month.toFixed(2);
+
+            // Hide month-change badge when not on the current year
+            const changeDivider = document.getElementById('chartChangeDivider');
+            const changeEl      = document.getElementById('chartMonthChange');
+            const isCurrentYear = data.year === maxYear;
+            if (changeDivider) changeDivider.style.display = isCurrentYear ? '' : 'none';
+            if (changeEl)      changeEl.style.display      = isCurrentYear ? '' : 'none';
+
+            // Empty state
+            const hasData = data.datasets.some(ds => ds.some(v => v > 0));
+            document.getElementById('yearlyChart').style.display = hasData ? 'block' : 'none';
+            document.getElementById('chartEmpty').style.display  = hasData ? 'none'  : 'block';
+
+            updateFooter();
+        } catch (e) { console.error(e); }
+
+        viewYear = year;
+        syncNavBtns();
+    }
+
+    prevBtn.addEventListener('click', () => { if (viewYear > minYear) loadYear(viewYear - 1); });
+    nextBtn.addEventListener('click', () => { if (viewYear < maxYear) loadYear(viewYear + 1); });
+
 })();
 </script>
 {% endblock %}

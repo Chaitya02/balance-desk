@@ -102,11 +102,13 @@
                             {% endif %}
                         </td>
                         <td class="col-cat">
-                            <span class="cat-dot cat-dot--{{ e.category | lower | replace(' ', '-') | replace('/', '-') }}"></span>
-                            {{ e.category }}
+                            <span class="cat-icon-badge" data-category="{{ e.category }}">
+                                <span class="cat-icon-svg"></span>
+                                <span class="cat-icon-label">{{ e.category }}</span>
+                            </span>
                         </td>
                         <td class="col-mode">
-                            <span class="mode-badge">{{ e.mode.title() if e.mode else '—' }}</span>
+                            <span class="mode-badge">{{ e.mode.upper() if e.mode else '—' }}</span>
                         </td>
                         <td class="col-amount cell-num">${{ "%.2f"|format(e.amount) }}</td>
                         <td class="col-split cell-num cell-muted">
@@ -224,23 +226,22 @@
 {% endblock %}
 
 {% block scripts %}
+<script src="{{ url_for('static', filename='js/cat_icons.js') }}"></script>
+<script>
+document.querySelectorAll('.cat-icon-badge[data-category]').forEach(el => {
+    const cat = el.dataset.category;
+    const color = catColor(cat);
+    el.querySelector('.cat-icon-svg').innerHTML = catIcon(cat);
+    el.style.background  = color + '1a';
+    el.style.color       = color;
+    el.style.borderColor = color + '33';
+});
+</script>
 {% if expenses %}
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
 <script>
-const CAT_COLORS = {
-    'Eating Out':    '#e67e22',
-    'Grocery':       '#27ae60',
-    'Travel':        '#2980b9',
-    'Transport':     '#2980b9',
-    'Rent':          '#8e44ad',
-    'Entertainment': '#e91e8c',
-    'Shopping':      '#c0392b',
-    'Bills':         '#16a085',
-};
-const PALETTE = ['#1a472a','#2980b9','#e67e22','#8e44ad','#c0392b','#16a085','#e91e8c','#f39c12','#7f8c8d'];
-
 function colorFor(label, index) {
-    return CAT_COLORS[label] || PALETTE[index % PALETTE.length];
+    return catColor(label);
 }
 
 function buildChart(id, data, legendId) {

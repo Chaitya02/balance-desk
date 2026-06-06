@@ -118,7 +118,60 @@
         </div>
     </footer>
 
+    {% if current_user %}
+    <!-- Dex AI Companion -->
+    <button class="dex-fab" id="dexFab" aria-label="Open Dex AI companion">
+        <span class="dex-fab-avatar">D</span>
+        <span class="dex-fab-label">Dex</span>
+    </button>
+
+    <div class="dex-modal" id="dexModal" role="dialog" aria-modal="true" aria-label="Dex AI companion">
+        <div class="dex-modal-header">
+            <div class="dex-modal-title">
+                <span class="dex-modal-avatar">D</span>
+                <div>
+                    <p class="dex-modal-name">Dex</p>
+                    <p class="dex-modal-sub">AI Companion</p>
+                </div>
+            </div>
+            <button class="dex-modal-close" id="dexClose" aria-label="Close">
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                    <path d="M4.5 4.5l7 7M11.5 4.5l-7 7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+                </svg>
+            </button>
+        </div>
+        <div class="dex-modal-body">
+            <div class="dex-coming-soon">
+                <div class="dex-cs-icon">
+                    <svg width="36" height="36" viewBox="0 0 36 36" fill="none">
+                        <circle cx="18" cy="18" r="16" stroke="var(--accent)" stroke-width="1.5" stroke-dasharray="4 3"/>
+                        <path d="M12 18h5m0 0l-2-2m2 2l-2 2M19 18h5" stroke="var(--accent)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                        <circle cx="18" cy="11" r="1.5" fill="var(--accent)"/>
+                        <circle cx="18" cy="25" r="1.5" fill="var(--accent)"/>
+                    </svg>
+                </div>
+                <p class="dex-cs-title">Coming Soon</p>
+                <p class="dex-cs-desc">Dex will help you understand your spending, spot trends, and answer questions about your finances — all in plain English.</p>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
     <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+    <script>
+        // Dex FAB
+        const dexFab   = document.getElementById('dexFab');
+        const dexModal = document.getElementById('dexModal');
+        const dexClose = document.getElementById('dexClose');
+        if (dexFab) {
+            dexFab.addEventListener('click', () => dexModal.classList.toggle('dex-modal--open'));
+            dexClose.addEventListener('click', () => dexModal.classList.remove('dex-modal--open'));
+            document.addEventListener('click', e => {
+                if (!dexModal.contains(e.target) && e.target !== dexFab && !dexFab.contains(e.target))
+                    dexModal.classList.remove('dex-modal--open');
+            });
+        }
+    </script>
     <script>
         // Three-dot menu toggle
         const dotsBtn   = document.getElementById('navDotsBtn');

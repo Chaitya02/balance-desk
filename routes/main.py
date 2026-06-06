@@ -1,7 +1,7 @@
 import json
 from collections import defaultdict
 from datetime import datetime
-from flask import Blueprint, render_template, session
+from flask import Blueprint, render_template, session, jsonify
 from models import db, Expense
 from utils import login_required
 from routes.expenses import DEFAULT_PAYMENT_METHODS, MONTH_NAMES
@@ -96,6 +96,10 @@ def dashboard():
         'monthly_totals': monthly_totals,
     }
 
+    first = (db.session.query(db.func.min(Expense.date))
+             .filter_by(user_id=user_id).scalar())
+    min_year = first.year if first else now.year
+
     return render_template('dashboard.html',
                            total_month=total_month,
                            transactions=transactions,
@@ -110,7 +114,43 @@ def dashboard():
                            month_change_pct=month_change_pct,
                            prev_month_name=prev_month_name,
                            payment_methods_lc=[m.lower() for m in DEFAULT_PAYMENT_METHODS],
+                           min_year=min_year,
                            chart_data=json.dumps(chart_data))
+
+
+@main_bp.route('/api/chart-data/<int:year>')
+@login_required
+def chart_data_api(year):
+    user_id = session['user_id']
+    year_expenses = (Expense.query
+                     .filter_by(user_id=user_id)
+                     .filter(db.extract('year', Expense.date) == year)
+                     .all())
+
+    monthly_cat = defaultdict(lambda: defaultdict(float))
+    chart_cats = set()
+    for e in year_expenses:
+        monthly_cat[e.date.month][e.category] += e.amount if e.split is None else e.split
+        chart_cats.add(e.category)
+
+    chart_cats     = sorted(chart_cats)
+    monthly_totals = [round(sum(monthly_cat[m].values()), 2) for m in range(1, 13)]
+    total_year     = round(sum(monthly_totals), 2)
+    active_months  = sum(1 for t in monthly_totals if t > 0)
+    avg_month      = round(total_year / active_months, 2) if active_months else 0
+
+    return jsonify({
+        'year':           year,
+        'labels':         [m[:3] for m in MONTH_NAMES],
+        'categories':     chart_cats,
+        'datasets':       [
+            [round(monthly_cat[m].get(cat, 0), 2) for m in range(1, 13)]
+            for cat in chart_cats
+        ],
+        'monthly_totals': monthly_totals,
+        'total_year':     total_year,
+        'avg_month':      avg_month,
+    })
 
 
 @main_bp.route('/terms')

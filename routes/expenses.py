@@ -84,7 +84,7 @@ def list_expenses():
     if cat_filter:
         q = q.filter_by(category=cat_filter)
     if mode_filter:
-        q = q.filter_by(mode=mode_filter)
+        q = q.filter(db.func.upper(Expense.mode) == mode_filter.upper())
 
     expenses = q.all()
 
@@ -108,7 +108,7 @@ def list_expenses():
     mode_totals = {}
     for e in expenses:
         cat_totals[e.category] = round(cat_totals.get(e.category, 0) + my_spend(e), 2)
-        key = e.mode.strip().title() if e.mode else 'Other'
+        key = e.mode.strip().upper() if e.mode else 'OTHER'
         mode_totals[key] = round(mode_totals.get(key, 0) + my_spend(e), 2)
 
     top_category = max(cat_totals, key=cat_totals.get) if cat_totals else '—'
@@ -129,7 +129,13 @@ def list_expenses():
     available_years = sorted({int(r[0]) for r in year_rows} | {today.year}, reverse=True)
 
     categories = sorted(set(DEFAULT_CATEGORIES) | set(_user_options('category')))
-    modes      = sorted(set(_user_options('mode')))
+    _seen_modes = set()
+    modes = []
+    for m in sorted(_user_options('mode')):
+        key = m.strip().upper()
+        if key and key not in _seen_modes:
+            _seen_modes.add(key)
+            modes.append(key)
 
     return render_template(
         'expenses.html',

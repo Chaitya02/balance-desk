@@ -1718,6 +1718,23 @@ input[type="date"].form-input::-webkit-datetime-edit { color: var(--ink); }
 .cat-dot--entertainment   { background: #e91e8c; }
 .cat-dot--shopping        { background: #c0392b; }
 
+/* Category icon badge (dashboard + expenses) */
+.cat-icon-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    padding: 0.18rem 0.55rem 0.18rem 0.35rem;
+    border-radius: 999px;
+    border: 1px solid;
+    font-size: 0.78rem;
+    font-weight: 500;
+    white-space: nowrap;
+}
+
+.cat-icon-svg { display: inline-flex; align-items: center; line-height: 1; flex-shrink: 0; }
+.cat-icon-svg svg { width: 13px; height: 13px; }
+.cat-icon-label { font-size: 0.78rem; }
+
 /* Mode badge */
 .mode-badge {
     display: inline-block;
@@ -3332,4 +3349,197 @@ input[type="date"].form-input::-webkit-datetime-edit { color: var(--ink); }
     .review-table-row { grid-template-columns: 1fr 2.5rem 1fr; padding: 0.6rem 0.75rem; }
     .review-actions { flex-direction: column-reverse; }
     .review-actions .ie-btn { width: 100%; }
+}
+
+/* ------------------------------------------------------------------ */
+/* Dex AI Companion                                                    */
+/* ------------------------------------------------------------------ */
+
+.dex-fab {
+    position: fixed;
+    bottom: 1.75rem;
+    right: 1.75rem;
+    z-index: 900;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.55rem 1rem 0.55rem 0.55rem;
+    background: var(--accent);
+    color: #fff;
+    border: none;
+    border-radius: 999px;
+    cursor: pointer;
+    box-shadow: 0 4px 20px rgba(26,71,42,0.30);
+    font-family: var(--font);
+    font-size: 0.875rem;
+    font-weight: 600;
+    transition: transform 0.15s, box-shadow 0.15s;
+}
+
+.dex-fab:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 24px rgba(26,71,42,0.38);
+}
+
+.dex-fab-avatar {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.2);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.8rem;
+    font-weight: 700;
+    flex-shrink: 0;
+}
+
+.dex-fab-label { letter-spacing: 0.01em; }
+
+.dex-modal {
+    position: fixed;
+    bottom: 5.25rem;
+    right: 1.75rem;
+    z-index: 901;
+    width: 320px;
+    background: var(--paper-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-lg);
+    opacity: 0;
+    transform: translateY(12px) scale(0.97);
+    pointer-events: none;
+    transform-origin: bottom right;
+    transition: opacity 0.18s, transform 0.18s;
+}
+
+.dex-modal--open {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+    pointer-events: all;
+}
+
+.dex-modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.875rem 1rem;
+    border-bottom: 1px solid var(--border-soft);
+}
+
+.dex-modal-title {
+    display: flex;
+    align-items: center;
+    gap: 0.65rem;
+}
+
+.dex-modal-avatar {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: var(--accent);
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.95rem;
+    font-weight: 700;
+    flex-shrink: 0;
+}
+
+.dex-modal-name {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--ink);
+    line-height: 1.2;
+}
+
+.dex-modal-sub {
+    font-size: 0.75rem;
+    color: var(--ink-muted);
+}
+
+.dex-modal-close {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    color: var(--ink-muted);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.12s, color 0.12s;
+}
+
+.dex-modal-close:hover { background: var(--paper-warm); color: var(--ink); }
+
+.dex-modal-body { padding: 1.5rem 1rem; }
+
+.dex-coming-soon {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    gap: 0.75rem;
+}
+
+.dex-cs-icon {
+    width: 64px;
+    height: 64px;
+    border-radius: 50%;
+    background: var(--accent-light);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 0.25rem;
+}
+
+.dex-cs-title {
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--ink);
+}
+
+.dex-cs-desc {
+    font-size: 0.825rem;
+    color: var(--ink-muted);
+    line-height: 1.55;
+}
+
+/* ------------------------------------------------------------------ */
+/* Chart year navigation                                               */
+/* ------------------------------------------------------------------ */
+
+.analytics-year-nav {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+}
+
+.chart-year-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--border);
+    background: var(--paper-card);
+    color: var(--ink-muted);
+    cursor: pointer;
+    transition: background 0.12s, color 0.12s, border-color 0.12s, opacity 0.12s;
+    flex-shrink: 0;
+}
+
+.chart-year-btn:hover:not(:disabled) {
+    background: var(--paper-warm);
+    color: var(--ink);
+    border-color: var(--border);
+}
+
+.chart-year-btn:disabled {
+    cursor: default;
+    pointer-events: none;
 }
