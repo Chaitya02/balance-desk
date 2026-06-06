@@ -2,6 +2,10 @@
 
 {% block title %}Dashboard — Balance Desk{% endblock %}
 
+{% block head %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+{% endblock %}
+
 {% block content %}
 
 <section class="dashboard">
@@ -38,6 +42,56 @@
                 <p class="stat-label">You Are Owed</p>
                 <p class="stat-value">${{ "%.2f"|format(friend_owes) }}</p>
             </div>
+        </div>
+
+        <!-- Yearly analytics chart -->
+        <div class="analytics-section">
+
+            <div class="analytics-header">
+                <div>
+                    <h2 class="dashboard-section-title">{{ year }} Spending</h2>
+                </div>
+                <div class="analytics-header-stats">
+                    <div class="analytics-hstat">
+                        <span class="analytics-hstat-label">Year total</span>
+                        <span class="analytics-hstat-value">${{ "%.2f"|format(total_year) }}</span>
+                    </div>
+                    <div class="analytics-hstat-divider"></div>
+                    <div class="analytics-hstat">
+                        <span class="analytics-hstat-label">Monthly avg</span>
+                        <span class="analytics-hstat-value">${{ "%.2f"|format(avg_month) }}</span>
+                    </div>
+                    {% if month_change_pct is not none %}
+                    <div class="analytics-hstat-divider"></div>
+                    <div class="analytics-change {% if month_change_pct >= 0 %}analytics-change--up{% else %}analytics-change--down{% endif %}">
+                        <span class="analytics-change-arrow">{{ '↑' if month_change_pct >= 0 else '↓' }}</span>
+                        <span class="analytics-change-pct">{{ month_change_pct | abs }}%</span>
+                        <span class="analytics-change-label">vs {{ prev_month_name }}</span>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="analytics-card">
+                <div class="analytics-legend-bar">
+                    <div class="analytics-legend" id="chartLegend"></div>
+                    <div class="analytics-legend-controls">
+                        <button class="analytics-ctrl-btn" id="catAll">All</button>
+                        <button class="analytics-ctrl-btn" id="catNone">None</button>
+                    </div>
+                </div>
+
+                <canvas id="yearlyChart"></canvas>
+                <p class="analytics-empty" id="chartEmpty"  style="display:none">No expenses recorded for {{ year }} yet.</p>
+                <p class="analytics-empty" id="chartNoSel" style="display:none">Select categories above to view spending.</p>
+
+                <div class="analytics-footer" id="analyticsFooter" style="display:none">
+                    <span class="analytics-footer-label">Filtered total</span>
+                    <span class="analytics-footer-value" id="analyticsFilterTotal"></span>
+                    <span class="analytics-footer-note"  id="analyticsCatNote"></span>
+                </div>
+            </div>
+
         </div>
 
         <!-- This month's expenses -->
@@ -112,4 +166,152 @@
     </div>
 </section>
 
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function () {
+    const raw = {{ chart_data | safe }};
+
+    const PALETTE = [
+        '#1a472a','#b87320','#4a6fa5','#7b5ea7','#c0392b',
+        '#2e86ab','#a23b72','#e07b39','#3a7d44','#5c6bc0',
+        '#d4a017','#6d4c41','#00897b','#8d6e63','#546e7a'
+    ];
+
+    const hasData = raw.datasets.some(ds => ds.some(v => v > 0));
+    if (!hasData) {
+        document.getElementById('yearlyChart').style.display = 'none';
+        document.getElementById('chartEmpty').style.display  = 'block';
+        return;
+    }
+
+    /* ── chart instance ─────────────────────────────────── */
+    const datasets = raw.categories.map((cat, i) => ({
+        label: cat,
+        data: raw.datasets[i],
+        backgroundColor: PALETTE[i % PALETTE.length],
+        hoverBackgroundColor: PALETTE[i % PALETTE.length],
+        borderRadius: 3,
+        borderSkipped: false,
+    }));
+
+    const chart = new Chart(document.getElementById('yearlyChart'), {
+        type: 'bar',
+        data: { labels: raw.labels, datasets },
+        options: {
+            responsive: true,
+            maintainAspectRatio: true,
+            aspectRatio: 2.6,
+            animation: { duration: 300 },
+            plugins: {
+                legend: { display: false },
+                tooltip: {
+                    callbacks: {
+                        label: ctx => ` ${ctx.dataset.label}: $${ctx.parsed.y.toFixed(2)}`,
+                        footer: items => {
+                            const visible = items.filter(i => chart.isDatasetVisible(i.datasetIndex));
+                            const total = visible.reduce((s, i) => s + i.parsed.y, 0);
+                            const grandTotal = raw.monthly_totals[items[0].dataIndex];
+                            const pct = grandTotal > 0 ? (total / grandTotal * 100).toFixed(1) : '0.0';
+                            return [`Total (visible): $${total.toFixed(2)}`, `${pct}% of month`];
+                        }
+                    },
+                    padding: 10,
+                    boxPadding: 4,
+                }
+            },
+            scales: {
+                x: {
+                    stacked: true,
+                    grid: { display: false },
+                    border: { color: '#e0ddd6' },
+                    ticks: { font: { size: 12, family: 'Helvetica, Arial, sans-serif' }, color: '#666666' }
+                },
+                y: {
+                    stacked: true,
+                    grid: { color: '#eae7e0' },
+                    border: { dash: [4, 4], color: 'transparent' },
+                    ticks: {
+                        font: { size: 11, family: 'Helvetica, Arial, sans-serif' },
+                        color: '#999999',
+                        callback: v => '$' + v.toLocaleString()
+                    }
+                }
+            }
+        }
+    });
+
+    /* ── footer updater ─────────────────────────────────── */
+    function updateFooter() {
+        const visibleIdxs = raw.categories.map((_, i) => i).filter(i => chart.isDatasetVisible(i));
+        const total = visibleIdxs.reduce((sum, i) =>
+            sum + raw.datasets[i].reduce((a, b) => a + b, 0), 0);
+        const n = visibleIdxs.length;
+        const footer = document.getElementById('analyticsFooter');
+        const noSel  = document.getElementById('chartNoSel');
+        const canvas = document.getElementById('yearlyChart');
+
+        if (n === 0) {
+            footer.style.display = 'none';
+            noSel.style.display  = 'block';
+            canvas.style.display = 'none';
+        } else {
+            footer.style.display = 'flex';
+            noSel.style.display  = 'none';
+            canvas.style.display = 'block';
+            document.getElementById('analyticsFilterTotal').textContent =
+                '$' + total.toFixed(2);
+            const all = raw.categories.length;
+            document.getElementById('analyticsCatNote').textContent =
+                n === all ? `all ${all} categories`
+                          : `${n} of ${all} categories`;
+        }
+    }
+
+    /* ── interactive legend ─────────────────────────────── */
+    const legendEl = document.getElementById('chartLegend');
+    raw.categories.forEach((cat, i) => {
+        const chip = document.createElement('span');
+        chip.className   = 'analytics-legend-item analytics-legend-item--on';
+        chip.dataset.idx = i;
+        chip.innerHTML   = `<span class="analytics-legend-dot" style="background:${PALETTE[i % PALETTE.length]}"></span>${cat}`;
+        chip.addEventListener('click', () => {
+            const on = chip.classList.toggle('analytics-legend-item--on');
+            chip.classList.toggle('analytics-legend-item--off', !on);
+            chart.setDatasetVisibility(i, on);
+            chart.update();
+            updateFooter();
+        });
+        legendEl.appendChild(chip);
+    });
+
+    /* ── All / None buttons ─────────────────────────────── */
+    document.getElementById('catAll').addEventListener('click', () => {
+        raw.categories.forEach((_, i) => {
+            chart.setDatasetVisibility(i, true);
+        });
+        legendEl.querySelectorAll('.analytics-legend-item').forEach(c => {
+            c.classList.add('analytics-legend-item--on');
+            c.classList.remove('analytics-legend-item--off');
+        });
+        chart.update();
+        updateFooter();
+    });
+
+    document.getElementById('catNone').addEventListener('click', () => {
+        raw.categories.forEach((_, i) => {
+            chart.setDatasetVisibility(i, false);
+        });
+        legendEl.querySelectorAll('.analytics-legend-item').forEach(c => {
+            c.classList.remove('analytics-legend-item--on');
+            c.classList.add('analytics-legend-item--off');
+        });
+        chart.update();
+        updateFooter();
+    });
+
+    updateFooter();
+})();
+</script>
 {% endblock %}

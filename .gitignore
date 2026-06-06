@@ -9,3 +9,6 @@ __pycache__/
 .claude/
 
 client_secret*.json
+
+# Personal expense data — never commit
+my_expenses.xlsx

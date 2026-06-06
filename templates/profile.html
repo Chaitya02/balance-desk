@@ -104,6 +104,28 @@
                 {% endif %}
             </div>
 
+            <!-- Import / Export -->
+            <div class="profile-card">
+                <h2 class="profile-card-title">Import or Export Data</h2>
+                <p class="profile-card-hint">Download your expenses as an Excel file, or bulk-import from an existing spreadsheet.</p>
+                <div class="profile-ie-actions">
+                    <a href="{{ url_for('import_export.export_data') }}" class="profile-ie-btn">
+                        <svg width="15" height="15" viewBox="0 0 15 15" fill="none">
+                            <path d="M7.5 2v8M5 7l2.5 3L10 7" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+                            <path d="M2.5 12h10" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+                        </svg>
+                        Export to Excel
+                    </a>
+                    <a href="{{ url_for('import_export.import_data') }}" class="profile-ie-btn">
+                        <svg width="15" height="15" viewBox="0 0 15 15" fill="none">
+                            <path d="M7.5 13V5M5 8l2.5-3L10 8" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+                            <path d="M2.5 3h10" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+                        </svg>
+                        Import from Excel
+                    </a>
+                </div>
+            </div>
+
         </div>
 
     </div>

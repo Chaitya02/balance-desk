@@ -10,6 +10,7 @@ from models import db, User
 from routes.auth import auth_bp
 from routes.main import main_bp
 from routes.expenses import expenses_bp
+from routes.import_export import import_export_bp
 
 oauth = OAuth()
 
@@ -46,6 +47,7 @@ def create_app():
     app.register_blueprint(auth_bp)
     app.register_blueprint(main_bp)
     app.register_blueprint(expenses_bp)
+    app.register_blueprint(import_export_bp)
 
     @app.context_processor
     def inject_user():
@@ -76,4 +78,4 @@ app = create_app()
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5001))
-    app.run(debug=True, port=port)
+    app.run(debug=True, port=port, use_reloader=True)

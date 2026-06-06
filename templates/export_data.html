@@ -1,0 +1,98 @@
+{% extends "base.html" %}
+
+{% block title %}Export Expenses — Balance Desk{% endblock %}
+
+{% block content %}
+
+<section class="ie-page">
+    <div class="ie-inner ie-inner--single">
+
+        <div class="ie-header">
+            <div>
+                <p class="ie-eyebrow">
+                    <a href="{{ url_for('auth.profile') }}" class="ie-back">← Settings</a>
+                </p>
+                <h1 class="ie-title">Export Expenses</h1>
+            </div>
+        </div>
+
+        <div class="ie-card ie-card--full">
+            <div class="ie-card-icon ie-card-icon--export">
+                <svg width="22" height="22" viewBox="0 0 22 22" fill="none">
+                    <path d="M11 3v10M7.5 9.5 11 13l3.5-3.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+                    <path d="M4 16h14" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+                </svg>
+            </div>
+            <h2 class="ie-card-title">Download as Excel</h2>
+            <p class="ie-card-desc">Pick a year and one or more months. Each month is exported as a separate tab named <code>Mon YY</code> — the same format as your existing spreadsheet.</p>
+
+            <form method="POST" action="{{ url_for('import_export.export_expenses') }}" class="ie-form" id="exportForm">
+
+                <div class="ie-form-row">
+                    <label class="ie-label" for="exportYear">Year</label>
+                    <input class="ie-input ie-input--year" type="number"
+                           id="exportYear" name="year"
+                           value="{{ year }}" min="2020" max="2099">
+                </div>
+
+                <div class="ie-form-row">
+                    <div class="ie-label-row">
+                        <label class="ie-label">Months</label>
+                        <div class="ie-month-actions">
+                            <button type="button" class="ie-text-btn" id="selAll">All</button>
+                            <span class="ie-text-sep">·</span>
+                            <button type="button" class="ie-text-btn" id="selNone">Clear</button>
+                        </div>
+                    </div>
+                    <div class="ie-month-grid">
+                        {% for i, name in month_names | enumerate %}
+                        {% set m = i + 1 %}
+                        <label class="ie-month-chip {% if m == current_month %}ie-month-chip--default{% endif %}">
+                            <input type="checkbox" name="months" value="{{ m }}"
+                                   {% if m == current_month %}checked{% endif %}>
+                            <span>{{ name[:3] }}</span>
+                        </label>
+                        {% endfor %}
+                    </div>
+                </div>
+
+                <button type="submit" class="ie-btn ie-btn--primary">
+                    <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+                        <path d="M7 1v8M4.5 6.5 7 9l2.5-2.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+                        <path d="M2 11h10" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+                    </svg>
+                    Export Expenses
+                </button>
+
+            </form>
+        </div>
+
+    </div>
+</section>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.getElementById('selAll').addEventListener('click', () => {
+    document.querySelectorAll('#exportForm input[name="months"]').forEach(c => c.checked = true);
+    syncChips();
+});
+document.getElementById('selNone').addEventListener('click', () => {
+    document.querySelectorAll('#exportForm input[name="months"]').forEach(c => c.checked = false);
+    syncChips();
+});
+
+function syncChips() {
+    document.querySelectorAll('.ie-month-chip').forEach(label => {
+        label.classList.toggle('ie-month-chip--on', label.querySelector('input').checked);
+    });
+}
+
+document.querySelectorAll('.ie-month-chip input').forEach(cb => {
+    cb.addEventListener('change', syncChips);
+});
+
+syncChips();
+</script>
+{% endblock %}

@@ -1,0 +1,261 @@
+{% extends "base.html" %}
+
+{% block title %}Import Expenses — Balance Desk{% endblock %}
+
+{% block content %}
+
+<section class="ie-page">
+    <div class="ie-inner ie-inner--single">
+
+        <div class="ie-header">
+            <div>
+                <p class="ie-eyebrow">
+                    <a href="{{ url_for('auth.profile') }}" class="ie-back">← Settings</a>
+                </p>
+                <h1 class="ie-title">Import Expenses</h1>
+            </div>
+        </div>
+
+        <div class="ie-card ie-card--full">
+            <div class="ie-card-icon ie-card-icon--import">
+                <svg width="22" height="22" viewBox="0 0 22 22" fill="none">
+                    <path d="M11 19V9M7.5 12.5 11 9l3.5 3.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+                    <path d="M4 6h14" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+                </svg>
+            </div>
+            <h2 class="ie-card-title">Upload Excel file</h2>
+            <p class="ie-card-desc">Each sheet tab must be named <code>Mon YY</code> (e.g. <code>Jun 26</code>). Columns: <strong>Sr. No. · Date · Title · Description · Category · Mode · Amount · Split</strong>. Use your card name in Mode if you paid; use <code>FRIEND</code> or <code>Name Paid</code> if someone else paid.</p>
+
+            <div class="ie-template-row">
+                <a href="{{ url_for('import_export.download_template') }}" class="ie-template-link">
+                    <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+                        <rect x="2" y="1" width="10" height="12" rx="1.5" stroke="currentColor" stroke-width="1.3"/>
+                        <path d="M4.5 4.5h5M4.5 6.5h5M4.5 8.5h3" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/>
+                    </svg>
+                    Download expenses_template.xlsx
+                </a>
+                <p class="ie-template-hint">Includes example rows and an Instructions tab. Delete example rows before importing.</p>
+            </div>
+
+            <form method="POST" action="{{ url_for('import_export.import_expenses') }}"
+                  enctype="multipart/form-data" class="ie-form" id="importForm">
+
+                <div class="ie-form-row">
+                    <label class="ie-label">For months already in your data</label>
+                    <div class="import-mode-group">
+                        <label class="import-mode-card import-mode-card--selected" id="modeAddLabel">
+                            <input type="radio" name="import_mode" value="add" checked>
+                            <div class="import-mode-icon import-mode-icon--add">
+                                <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+                                    <circle cx="9" cy="9" r="7" stroke="currentColor" stroke-width="1.5"/>
+                                    <path d="M9 6v6M6 9h6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+                                </svg>
+                            </div>
+                            <div>
+                                <p class="import-mode-title">Add to existing</p>
+                                <p class="import-mode-desc">New expenses are appended alongside current ones.</p>
+                            </div>
+                        </label>
+                        <label class="import-mode-card" id="modeReplaceLabel">
+                            <input type="radio" name="import_mode" value="replace">
+                            <div class="import-mode-icon import-mode-icon--replace">
+                                <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+                                    <path d="M3 9a6 6 0 1 0 6-6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+                                    <path d="M3 5v4h4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                                </svg>
+                            </div>
+                            <div>
+                                <p class="import-mode-title">Replace those months</p>
+                                <p class="import-mode-desc">Existing expenses for the imported months are deleted first.</p>
+                            </div>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="ie-dropzone" id="dropzone">
+                    <input type="file" name="file" id="importFile"
+                           accept=".xlsx" class="ie-dropzone-input">
+                    <div class="ie-dropzone-body">
+                        <svg width="28" height="28" viewBox="0 0 28 28" fill="none">
+                            <path d="M14 20V10M10 13.5l4-4 4 4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+                            <rect x="3" y="3" width="22" height="22" rx="4" stroke="currentColor" stroke-width="1.4" stroke-dasharray="3 3"/>
+                        </svg>
+                        <p class="ie-dropzone-label" id="dropLabel">Drag &amp; drop your <code>.xlsx</code> here</p>
+                        <p class="ie-dropzone-or">or</p>
+                        <button type="button" class="ie-text-btn ie-text-btn--browse" id="browseBtn">Browse file</button>
+                    </div>
+                </div>
+
+                <button type="submit" class="ie-btn ie-btn--primary" id="importBtn" disabled>
+                    <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+                        <path d="M7 13V5M4.5 7.5 7 5l2.5 2.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+                        <path d="M2 3h10" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+                    </svg>
+                    Import Expenses
+                </button>
+
+            </form>
+        </div>
+
+    </div>
+</section>
+
+<!-- ── Normalize modal ──────────────────────────────────────────────── -->
+{% if show_normalize and (normalize_modes or normalize_cats) %}
+<div class="norm-overlay" id="normOverlay">
+    <div class="norm-modal" role="dialog" aria-modal="true" aria-labelledby="normTitle">
+
+        <div class="norm-header">
+            <div>
+                <h2 class="norm-title" id="normTitle">Review imported data</h2>
+                <p class="norm-subtitle">Standardise modes and categories so your data stays consistent.</p>
+            </div>
+            <button class="norm-close" id="normClose" type="button" aria-label="Close">
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                    <path d="M3 3l10 10M13 3L3 13" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+                </svg>
+            </button>
+        </div>
+
+        <form method="POST" action="{{ url_for('import_export.apply_normalize') }}" class="norm-form">
+        <div class="norm-body">
+
+            {% if normalize_modes %}
+            <div class="norm-section">
+                <h3 class="norm-section-title">
+                    <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+                        <rect x="1" y="1" width="12" height="12" rx="2" stroke="currentColor" stroke-width="1.3"/>
+                        <path d="M4 7h6M4 4.5h4M4 9.5h3" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/>
+                    </svg>
+                    Payment Modes
+                    <span class="norm-section-count">{{ normalize_modes|length }}</span>
+                </h3>
+                <p class="norm-section-hint">Rename to merge duplicates (e.g. "FRIEND" → "Friend"). Leave blank to keep as-is.</p>
+                <div class="norm-list">
+                    {% for mode in normalize_modes %}
+                    <div class="norm-row">
+                        <span class="norm-original" title="{{ mode }}">{{ mode }}</span>
+                        <svg width="12" height="12" viewBox="0 0 12 12" fill="none" class="norm-arrow">
+                            <path d="M2 6h8M7 3.5l2.5 2.5L7 8.5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                        <input class="norm-input" type="text"
+                               name="mode_{{ mode }}" value="{{ mode }}"
+                               placeholder="keep as-is" list="modeHints">
+                    </div>
+                    {% endfor %}
+                </div>
+                <datalist id="modeHints">
+                    {% for mode in normalize_modes %}<option value="{{ mode }}">{% endfor %}
+                </datalist>
+            </div>
+            {% endif %}
+
+            {% if normalize_cats %}
+            <div class="norm-section">
+                <h3 class="norm-section-title">
+                    <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+                        <circle cx="7" cy="7" r="5.5" stroke="currentColor" stroke-width="1.3"/>
+                        <path d="M4.5 7h5M7 4.5v5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/>
+                    </svg>
+                    Categories
+                    <span class="norm-section-count">{{ normalize_cats|length }}</span>
+                </h3>
+                <p class="norm-section-hint">Map each category to one of the standard options.</p>
+                <div class="norm-list">
+                    {% for cat in normalize_cats %}
+                    <div class="norm-row">
+                        <span class="norm-original" title="{{ cat }}">{{ cat }}</span>
+                        <svg width="12" height="12" viewBox="0 0 12 12" fill="none" class="norm-arrow">
+                            <path d="M2 6h8M7 3.5l2.5 2.5L7 8.5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                        <select class="norm-select" name="cat_{{ cat }}">
+                            <option value="{{ cat }}"{% if cat in standard_categories %} selected{% endif %}>{{ cat }} (keep)</option>
+                            <option disabled>──────────</option>
+                            {% for std in standard_categories %}
+                            {% if std != cat %}
+                            <option value="{{ std }}"{% if std.lower() == cat.lower() %} selected{% endif %}>{{ std }}</option>
+                            {% endif %}
+                            {% endfor %}
+                        </select>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+
+        </div>
+
+        <div class="norm-footer">
+            <button type="button" class="ie-btn ie-btn--secondary norm-btn-skip" id="normSkip">Skip for now</button>
+            <button type="submit" class="ie-btn ie-btn--primary norm-btn-apply">Apply changes</button>
+        </div>
+        </form>
+
+    </div>
+</div>
+{% endif %}
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Import mode toggle
+document.querySelectorAll('input[name="import_mode"]').forEach(radio => {
+    radio.addEventListener('change', () => {
+        document.querySelectorAll('.import-mode-card').forEach(c => c.classList.remove('import-mode-card--selected'));
+        radio.closest('.import-mode-card').classList.add('import-mode-card--selected');
+    });
+});
+
+// File dropzone
+const dropzone  = document.getElementById('dropzone');
+const fileInput = document.getElementById('importFile');
+const dropLabel = document.getElementById('dropLabel');
+const browseBtn = document.getElementById('browseBtn');
+
+browseBtn.addEventListener('click', () => fileInput.click());
+
+fileInput.addEventListener('change', () => {
+    if (fileInput.files.length) {
+        dropLabel.textContent = fileInput.files[0].name;
+        dropzone.classList.add('ie-dropzone--has-file');
+        document.getElementById('importBtn').disabled = false;
+    }
+});
+
+['dragover','dragenter'].forEach(ev =>
+    dropzone.addEventListener(ev, e => { e.preventDefault(); dropzone.classList.add('ie-dropzone--hover'); })
+);
+['dragleave','drop'].forEach(ev =>
+    dropzone.addEventListener(ev, e => { e.preventDefault(); dropzone.classList.remove('ie-dropzone--hover'); })
+);
+dropzone.addEventListener('drop', e => {
+    const file = e.dataTransfer.files[0];
+    if (file && file.name.endsWith('.xlsx')) {
+        const dt = new DataTransfer();
+        dt.items.add(file);
+        fileInput.files = dt.files;
+        dropLabel.textContent = file.name;
+        dropzone.classList.add('ie-dropzone--has-file');
+        document.getElementById('importBtn').disabled = false;
+    }
+});
+
+// Normalize modal
+const overlay = document.getElementById('normOverlay');
+if (overlay) {
+    overlay.classList.add('norm-overlay--open');
+    document.body.style.overflow = 'hidden';
+
+    function closeModal() {
+        overlay.classList.remove('norm-overlay--open');
+        document.body.style.overflow = '';
+    }
+
+    document.getElementById('normClose').addEventListener('click', closeModal);
+    document.getElementById('normSkip').addEventListener('click', closeModal);
+    overlay.addEventListener('click', e => { if (e.target === overlay) closeModal(); });
+    document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
+}
+</script>
+{% endblock %}

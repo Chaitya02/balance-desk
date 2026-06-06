@@ -1,0 +1,78 @@
+{% extends "base.html" %}
+
+{% block title %}Review Categories — Balance Desk{% endblock %}
+
+{% block content %}
+
+<section class="ie-page">
+    <div class="ie-inner ie-inner--single">
+
+        <div class="ie-header">
+            <div>
+                <p class="ie-eyebrow">
+                    <a href="{{ url_for('import_export.import_data') }}" class="ie-back">← Import</a>
+                </p>
+                <h1 class="ie-title">Review Categories</h1>
+            </div>
+        </div>
+
+        <div class="ie-card ie-card--full">
+            <div class="ie-card-icon ie-card-icon--import">
+                <svg width="22" height="22" viewBox="0 0 22 22" fill="none">
+                    <path d="M4 11h14M11 4l7 7-7 7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+            </div>
+            <h2 class="ie-card-title">Map unrecognised categories</h2>
+            <p class="ie-card-desc">
+                Your file contains <strong>{{ nonstandard|length }}</strong> categor{{ 'y' if nonstandard|length == 1 else 'ies' }} not in Balance Desk's standard list.
+                Map each one before the import is committed — the mapping applies to all rows that use that category.
+            </p>
+
+            <div class="review-summary">
+                <span class="review-summary-pill">{{ total_rows }} expense{{ 's' if total_rows != 1 }}</span>
+                {% if skipped %}<span class="review-summary-pill review-summary-pill--warn">{{ skipped }} skipped</span>{% endif %}
+                <span class="review-summary-pill review-summary-pill--alert">{{ nonstandard|length }} to map</span>
+            </div>
+
+            <form method="POST" action="{{ url_for('import_export.import_apply') }}" class="ie-form" id="reviewForm">
+
+                <div class="review-table">
+                    <div class="review-table-head">
+                        <span>Category in your file</span>
+                        <span>Rows</span>
+                        <span>Map to</span>
+                    </div>
+
+                    {% for raw_cat, count in nonstandard %}
+                    <div class="review-table-row">
+                        <span class="review-raw-cat" title="{{ raw_cat }}">{{ raw_cat }}</span>
+                        <span class="review-count">{{ count }}</span>
+                        <select class="review-select norm-select" name="cat_{{ raw_cat }}">
+                            <option value="Miscellaneous">Miscellaneous (default)</option>
+                            <option disabled>──────────</option>
+                            {% for cat in standard_categories %}
+                            <option value="{{ cat }}"{% if cat.lower() == raw_cat.lower() %} selected{% endif %}>{{ cat }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    {% endfor %}
+                </div>
+
+                <div class="review-actions">
+                    <a href="{{ url_for('import_export.import_data') }}" class="ie-btn ie-btn--secondary">Cancel</a>
+                    <button type="submit" class="ie-btn ie-btn--primary">
+                        <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+                            <path d="M7 13V5M4.5 7.5 7 5l2.5 2.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+                            <path d="M2 3h10" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+                        </svg>
+                        Confirm &amp; Import
+                    </button>
+                </div>
+
+            </form>
+        </div>
+
+    </div>
+</section>
+
+{% endblock %}
