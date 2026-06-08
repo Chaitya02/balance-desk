@@ -145,6 +145,7 @@
                 <span class="dex-msg-avatar">D</span>
                 <div class="dex-msg-bubble">Hey! I'm Dex, your financial companion. Ask me anything about your spending — trends, totals, categories, you name it.</div>
             </div>
+            <div class="dex-starters" id="dexStarters"></div>
         </div>
         <div class="dex-chat-input-wrap">
             <textarea class="dex-chat-input" id="dexInput" placeholder="Ask about your spending…" rows="1"></textarea>
@@ -166,24 +167,37 @@
         const dexInput  = document.getElementById('dexInput');
         const dexSend   = document.getElementById('dexSend');
         const dexMsgs   = document.getElementById('dexMessages');
+        const dexStarters = document.getElementById('dexStarters');
         if (!dexFab) return;
 
-        // Toggle modal
-        dexFab.addEventListener('click', () => dexModal.classList.toggle('dex-modal--open'));
-        dexClose.addEventListener('click', () => dexModal.classList.remove('dex-modal--open'));
-        document.addEventListener('click', e => {
-            if (!dexModal.contains(e.target) && e.target !== dexFab && !dexFab.contains(e.target))
-                dexModal.classList.remove('dex-modal--open');
-        });
+        // Conversation history persists per-tab (sessionStorage) so navigating between
+        // pages doesn't wipe the chat — only logging out or closing the tab does.
+        const dexUserId = {{ (current_user.id if current_user else '') | tojson }};
+        const dexStorageKey = dexUserId ? 'dex_chat_' + dexUserId : null;
 
-        // Auto-grow textarea
-        dexInput.addEventListener('input', () => {
-            dexInput.style.height = 'auto';
-            dexInput.style.height = Math.min(dexInput.scrollHeight, 120) + 'px';
-        });
+        let history = [];
+        if (dexStorageKey) {
+            try {
+                const saved = JSON.parse(sessionStorage.getItem(dexStorageKey) || '[]');
+                if (Array.isArray(saved)) history = saved;
+            } catch {}
+        }
 
-        // Conversation history
-        const history = [];
+        function persistHistory() {
+            if (!dexStorageKey) return;
+            try { sessionStorage.setItem(dexStorageKey, JSON.stringify(history)); } catch {}
+        }
+
+        const logoutLink = document.querySelector('a[href="{{ url_for("auth.logout") }}"]');
+        if (logoutLink) {
+            logoutLink.addEventListener('click', () => {
+                try {
+                    Object.keys(sessionStorage)
+                        .filter(k => k.startsWith('dex_chat_'))
+                        .forEach(k => sessionStorage.removeItem(k));
+                } catch {}
+            });
+        }
 
         function addMsg(role, text) {
             const isAI = role === 'assistant';
@@ -201,6 +215,67 @@
             return bubble;
         }
 
+        // Restore a persisted conversation, if any — otherwise show fresh starter prompts
+        if (history.length) {
+            history.forEach(m => addMsg(m.role, m.content));
+        }
+
+        // Dex's self-generated starter prompts — kicked off on page load so they're
+        // usually ready before the user even opens the chat. A skeleton fills the gap.
+        function renderStarterSkeleton() {
+            dexStarters.innerHTML = '';
+            for (let i = 0; i < 3; i++) {
+                const chip = document.createElement('div');
+                chip.className = 'dex-starter-chip dex-starter-chip--skeleton';
+                dexStarters.appendChild(chip);
+            }
+        }
+
+        function renderStarters(prompts) {
+            if (history.length) return;
+            dexStarters.innerHTML = '';
+            prompts.forEach(text => {
+                const chip = document.createElement('button');
+                chip.type = 'button';
+                chip.className = 'dex-starter-chip';
+                chip.textContent = text;
+                chip.addEventListener('click', () => {
+                    dexStarters.classList.add('dex-starters--hidden');
+                    dexInput.value = text;
+                    sendMessage();
+                });
+                dexStarters.appendChild(chip);
+            });
+        }
+
+        if (!history.length) {
+            renderStarterSkeleton();
+            fetch('/api/dex/starters')
+                .then(r => r.json())
+                .then(data => {
+                    const prompts = Array.isArray(data.starters) ? data.starters.slice(0, 3) : [];
+                    if (prompts.length) renderStarters(prompts);
+                    else dexStarters.innerHTML = '';
+                })
+                .catch(() => { dexStarters.innerHTML = ''; });
+        }
+
+        // Toggle modal
+        dexFab.addEventListener('click', () => {
+            dexModal.classList.toggle('dex-modal--open');
+        });
+        dexClose.addEventListener('click', () => dexModal.classList.remove('dex-modal--open'));
+        document.addEventListener('click', e => {
+            if (!dexModal.contains(e.target) && e.target !== dexFab && !dexFab.contains(e.target))
+                dexModal.classList.remove('dex-modal--open');
+        });
+
+        // Auto-grow textarea
+        dexInput.addEventListener('input', () => {
+            dexInput.style.height = 'auto';
+            dexInput.style.height = Math.min(dexInput.scrollHeight, 120) + 'px';
+        });
+
         async function sendMessage() {
             const text = dexInput.value.trim();
             if (!text) return;
@@ -208,8 +283,10 @@
             dexInput.value = '';
             dexInput.style.height = 'auto';
             dexSend.disabled = true;
+            dexStarters.classList.add('dex-starters--hidden');
 
             history.push({ role: 'user', content: text });
+            persistHistory();
             addMsg('user', text);
 
             // Typing indicator
@@ -251,9 +328,9 @@
                         try {
                             const parsed = JSON.parse(payload);
                             if (parsed.error) { bubble.textContent = parsed.error; break; }
-                            if (parsed.event === 'expense_added') {
-                                // Reload page after stream finishes so new expense appears
-                                window._dexExpenseAdded = true;
+                            if (parsed.event === 'data_changed') {
+                                // Reload page after stream finishes so the change appears
+                                window._dexDataChanged = true;
                             }
                             if (parsed.content) {
                                 aiText += parsed.content;
@@ -264,8 +341,9 @@
                     }
                 }
                 history.push({ role: 'assistant', content: aiText });
-                if (window._dexExpenseAdded) {
-                    window._dexExpenseAdded = false;
+                persistHistory();
+                if (window._dexDataChanged) {
+                    window._dexDataChanged = false;
                     // Brief delay so user reads Dex's confirmation first
                     setTimeout(() => location.reload(), 2200);
                 }

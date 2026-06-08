@@ -17,6 +17,10 @@ services:
         sync: false
       - key: RESEND_API_KEY
         sync: false
+      - key: GROQ_API_KEY
+        sync: false
+      - key: ADMIN_EMAIL
+        sync: false
     disk:
       name: balance-desk-data
       mountPath: /data
