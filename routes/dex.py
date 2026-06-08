@@ -395,10 +395,10 @@ def chat():
         if msg.get('role') in ('user', 'assistant') and msg.get('content'):
             groq_messages.append({'role': msg['role'], 'content': msg['content']})
 
-    client = Groq(api_key=api_key)
-
     def generate():
         try:
+            client = Groq(api_key=api_key)
+
             # Non-streaming first call so we can detect tool calls
             response = client.chat.completions.create(
                 model='llama-3.3-70b-versatile',
