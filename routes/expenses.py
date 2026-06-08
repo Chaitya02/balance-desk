@@ -1,4 +1,5 @@
 import json
+from calendar import monthrange
 from datetime import date
 from flask import (Blueprint, render_template, request,
                    redirect, url_for, flash, session)
@@ -22,6 +23,15 @@ MONTH_NAMES = [
     'January', 'February', 'March', 'April', 'May', 'June',
     'July', 'August', 'September', 'October', 'November', 'December',
 ]
+
+
+def _max_allowed_date():
+    """Latest date a user may log an expense for — last day of next month."""
+    today = date.today()
+    month, year = today.month + 1, today.year
+    if month > 12:
+        month, year = 1, year + 1
+    return date(year, month, monthrange(year, month)[1])
 
 
 def _user_options(field):
@@ -71,6 +81,11 @@ def list_expenses():
     except (ValueError, TypeError):
         year, month = today.year, today.month
 
+    # Don't allow browsing past the current-month + 1 cutoff
+    cutoff_month = min(today.month + 1, 12)
+    if year > today.year or (year == today.year and month > cutoff_month):
+        year, month = today.year, cutoff_month
+
     cat_filter  = request.args.get('category', '')
     mode_filter = request.args.get('mode', '')
 
@@ -94,14 +109,22 @@ def list_expenses():
 
     # Summary stats
     total_spent = round(sum(my_spend(e) for e in expenses), 2)
+
     # I paid; friend owes the rest (or full amount when split=0)
-    friend_owes = round(sum(
-        e.amount - e.split
+    owed_to_you_items = [
+        {'expense': e, 'amount': round(e.amount - e.split, 2)}
         for e in expenses
         if e.paid_by_user and e.split is not None and e.split < e.amount
-    ), 2)
+    ]
+    friend_owes = round(sum(item['amount'] for item in owed_to_you_items), 2)
+
     # Someone else paid; I owe them my share
-    you_owe     = round(sum(my_spend(e) for e in expenses if not e.paid_by_user and e.split is not None), 2)
+    you_owe_items = [
+        {'expense': e, 'amount': round(my_spend(e), 2)}
+        for e in expenses
+        if not e.paid_by_user and e.split is not None
+    ]
+    you_owe = round(sum(item['amount'] for item in you_owe_items), 2)
 
     # Chart data (use my_spend for accurate personal spend by category)
     cat_totals  = {}
@@ -121,12 +144,16 @@ def list_expenses():
         friend_owes=friend_owes,
     )
 
-    # Available years for the year dropdown
-    year_rows = (db.session.query(db.extract('year', Expense.date))
+    # Available years for the year dropdown — continuous range from the
+    # current year down to the earliest year that has any recorded expense
+    year_rows = (db.session.query(db.func.min(db.extract('year', Expense.date)))
                  .filter_by(user_id=user_id)
-                 .distinct()
-                 .all())
-    available_years = sorted({int(r[0]) for r in year_rows} | {today.year}, reverse=True)
+                 .scalar())
+    earliest_year = int(year_rows) if year_rows else today.year
+    available_years = list(range(today.year, min(earliest_year, today.year) - 1, -1))
+
+    # Months selectable in the dropdown — current year is capped at next month
+    max_month = min(today.month + 1, 12) if year == today.year else 12
 
     categories = sorted(set(DEFAULT_CATEGORIES) | set(_user_options('category')))
     _seen_modes = set()
@@ -150,10 +177,13 @@ def list_expenses():
         month_name=MONTH_NAMES[month - 1],
         available_years=available_years,
         month_names=MONTH_NAMES,
+        max_month=max_month,
         cat_totals_json=json.dumps(cat_totals),
         mode_totals_json=json.dumps(mode_totals),
         you_owe=you_owe,
         friend_owes=friend_owes,
+        you_owe_items=you_owe_items,
+        owed_to_you_items=owed_to_you_items,
     )
 
 
@@ -185,6 +215,8 @@ def add_expense():
         except ValueError:
             error = 'Amount and Split must be valid numbers.'
 
+        max_allowed = _max_allowed_date()
+
         if not error:
             if not exp_date or not title or not category:
                 error = 'Date, Title, and Category are required.'
@@ -194,6 +226,12 @@ def add_expense():
                 error = 'My Split cannot be negative.'
             elif split is not None and split > amount:
                 error = 'My Split cannot exceed the total Amount.'
+            else:
+                try:
+                    if date.fromisoformat(exp_date) > max_allowed:
+                        error = f'Date cannot be later than {max_allowed.strftime("%b %d, %Y")}.'
+                except ValueError:
+                    error = 'Invalid date format.'
 
         if error:
             return render_template('add_expense.html',
@@ -201,7 +239,8 @@ def add_expense():
                                    categories=DEFAULT_CATEGORIES,
                                    payment_methods=_used_payment_methods(),
                                    payer_names=_payer_names(),
-                                   form=request.form)
+                                   form=request.form,
+                                   max_date=max_allowed.isoformat())
 
         expense = Expense(
             user_id=user_id,
@@ -228,7 +267,8 @@ def add_expense():
                            payment_methods=DEFAULT_PAYMENT_METHODS,
                            payer_names=_payer_names(),
                            form={},
-                           today=date.today().isoformat())
+                           today=date.today().isoformat(),
+                           max_date=_max_allowed_date().isoformat())
 
 
 # ------------------------------------------------------------------ #
@@ -260,6 +300,8 @@ def edit_expense(expense_id):
         except ValueError:
             error = 'Amount and Split must be valid numbers.'
 
+        max_allowed = _max_allowed_date()
+
         if not error:
             if not exp_date or not title or not category:
                 error = 'Date, Title, and Category are required.'
@@ -269,6 +311,12 @@ def edit_expense(expense_id):
                 error = 'My Split cannot be negative.'
             elif split is not None and split > amount:
                 error = 'My Split cannot exceed the total Amount.'
+            else:
+                try:
+                    if date.fromisoformat(exp_date) > max_allowed:
+                        error = f'Date cannot be later than {max_allowed.strftime("%b %d, %Y")}.'
+                except ValueError:
+                    error = 'Invalid date format.'
 
         if error:
             return render_template('edit_expense.html',
@@ -277,7 +325,8 @@ def edit_expense(expense_id):
                                    categories=DEFAULT_CATEGORIES,
                                    payment_methods=_used_payment_methods(),
                                    payer_names=_payer_names(),
-                                   form=request.form)
+                                   form=request.form,
+                                   max_date=max_allowed.isoformat())
 
         expense.date         = date.fromisoformat(exp_date)
         expense.title        = title
@@ -300,7 +349,8 @@ def edit_expense(expense_id):
                            payment_methods=DEFAULT_PAYMENT_METHODS,
                            payer_names=_payer_names(),
                            form={},
-                           error=None)
+                           error=None,
+                           max_date=_max_allowed_date().isoformat())
 
 
 # ------------------------------------------------------------------ #

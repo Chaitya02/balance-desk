@@ -11,6 +11,7 @@ from routes.auth import auth_bp
 from routes.main import main_bp
 from routes.expenses import expenses_bp
 from routes.import_export import import_export_bp
+from routes.dex import dex_bp
 
 oauth = OAuth()
 
@@ -63,6 +64,7 @@ def create_app():
     app.register_blueprint(main_bp)
     app.register_blueprint(expenses_bp)
     app.register_blueprint(import_export_bp)
+    app.register_blueprint(dex_bp)
 
     @app.context_processor
     def inject_user():

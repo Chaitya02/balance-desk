@@ -140,37 +140,148 @@
                 </svg>
             </button>
         </div>
-        <div class="dex-modal-body">
-            <div class="dex-coming-soon">
-                <div class="dex-cs-icon">
-                    <svg width="36" height="36" viewBox="0 0 36 36" fill="none">
-                        <circle cx="18" cy="18" r="16" stroke="var(--accent)" stroke-width="1.5" stroke-dasharray="4 3"/>
-                        <path d="M12 18h5m0 0l-2-2m2 2l-2 2M19 18h5" stroke="var(--accent)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-                        <circle cx="18" cy="11" r="1.5" fill="var(--accent)"/>
-                        <circle cx="18" cy="25" r="1.5" fill="var(--accent)"/>
-                    </svg>
-                </div>
-                <p class="dex-cs-title">Coming Soon</p>
-                <p class="dex-cs-desc">Dex will help you understand your spending, spot trends, and answer questions about your finances — all in plain English.</p>
+        <div class="dex-chat-messages" id="dexMessages">
+            <div class="dex-msg dex-msg--ai">
+                <span class="dex-msg-avatar">D</span>
+                <div class="dex-msg-bubble">Hey! I'm Dex, your financial companion. Ask me anything about your spending — trends, totals, categories, you name it.</div>
             </div>
+        </div>
+        <div class="dex-chat-input-wrap">
+            <textarea class="dex-chat-input" id="dexInput" placeholder="Ask about your spending…" rows="1"></textarea>
+            <button class="dex-chat-send" id="dexSend" aria-label="Send">
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                    <path d="M14 2L2 7l5 2 2 5 5-12z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/>
+                </svg>
+            </button>
         </div>
     </div>
     {% endif %}
 
     <script src="{{ url_for('static', filename='js/main.js') }}"></script>
     <script>
-        // Dex FAB
-        const dexFab   = document.getElementById('dexFab');
-        const dexModal = document.getElementById('dexModal');
-        const dexClose = document.getElementById('dexClose');
-        if (dexFab) {
-            dexFab.addEventListener('click', () => dexModal.classList.toggle('dex-modal--open'));
-            dexClose.addEventListener('click', () => dexModal.classList.remove('dex-modal--open'));
-            document.addEventListener('click', e => {
-                if (!dexModal.contains(e.target) && e.target !== dexFab && !dexFab.contains(e.target))
-                    dexModal.classList.remove('dex-modal--open');
-            });
+    (function () {
+        const dexFab    = document.getElementById('dexFab');
+        const dexModal  = document.getElementById('dexModal');
+        const dexClose  = document.getElementById('dexClose');
+        const dexInput  = document.getElementById('dexInput');
+        const dexSend   = document.getElementById('dexSend');
+        const dexMsgs   = document.getElementById('dexMessages');
+        if (!dexFab) return;
+
+        // Toggle modal
+        dexFab.addEventListener('click', () => dexModal.classList.toggle('dex-modal--open'));
+        dexClose.addEventListener('click', () => dexModal.classList.remove('dex-modal--open'));
+        document.addEventListener('click', e => {
+            if (!dexModal.contains(e.target) && e.target !== dexFab && !dexFab.contains(e.target))
+                dexModal.classList.remove('dex-modal--open');
+        });
+
+        // Auto-grow textarea
+        dexInput.addEventListener('input', () => {
+            dexInput.style.height = 'auto';
+            dexInput.style.height = Math.min(dexInput.scrollHeight, 120) + 'px';
+        });
+
+        // Conversation history
+        const history = [];
+
+        function addMsg(role, text) {
+            const isAI = role === 'assistant';
+            const wrap = document.createElement('div');
+            wrap.className = 'dex-msg ' + (isAI ? 'dex-msg--ai' : 'dex-msg--user');
+            if (isAI) {
+                wrap.innerHTML = `<span class="dex-msg-avatar">D</span><div class="dex-msg-bubble"></div>`;
+            } else {
+                wrap.innerHTML = `<div class="dex-msg-bubble"></div>`;
+            }
+            const bubble = wrap.querySelector('.dex-msg-bubble');
+            bubble.textContent = text;
+            dexMsgs.appendChild(wrap);
+            dexMsgs.scrollTop = dexMsgs.scrollHeight;
+            return bubble;
         }
+
+        async function sendMessage() {
+            const text = dexInput.value.trim();
+            if (!text) return;
+
+            dexInput.value = '';
+            dexInput.style.height = 'auto';
+            dexSend.disabled = true;
+
+            history.push({ role: 'user', content: text });
+            addMsg('user', text);
+
+            // Typing indicator
+            const typingWrap = document.createElement('div');
+            typingWrap.className = 'dex-msg dex-msg--ai dex-msg--typing';
+            typingWrap.innerHTML = '<span class="dex-msg-avatar">D</span><div class="dex-msg-bubble"><span class="dex-dot"></span><span class="dex-dot"></span><span class="dex-dot"></span></div>';
+            dexMsgs.appendChild(typingWrap);
+            dexMsgs.scrollTop = dexMsgs.scrollHeight;
+
+            try {
+                const resp = await fetch('/api/dex/chat', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ messages: history }),
+                });
+
+                typingWrap.remove();
+
+                if (!resp.ok) {
+                    const err = await resp.json().catch(() => ({}));
+                    addMsg('assistant', err.error || 'Something went wrong. Try again.');
+                    dexSend.disabled = false;
+                    return;
+                }
+
+                const bubble = addMsg('assistant', '');
+                const reader = resp.body.getReader();
+                const decoder = new TextDecoder();
+                let aiText = '';
+
+                while (true) {
+                    const { done, value } = await reader.read();
+                    if (done) break;
+                    const chunk = decoder.decode(value, { stream: true });
+                    for (const line of chunk.split('\n')) {
+                        if (!line.startsWith('data: ')) continue;
+                        const payload = line.slice(6).trim();
+                        if (payload === '[DONE]') break;
+                        try {
+                            const parsed = JSON.parse(payload);
+                            if (parsed.error) { bubble.textContent = parsed.error; break; }
+                            if (parsed.event === 'expense_added') {
+                                // Reload page after stream finishes so new expense appears
+                                window._dexExpenseAdded = true;
+                            }
+                            if (parsed.content) {
+                                aiText += parsed.content;
+                                bubble.textContent = aiText;
+                                dexMsgs.scrollTop = dexMsgs.scrollHeight;
+                            }
+                        } catch {}
+                    }
+                }
+                history.push({ role: 'assistant', content: aiText });
+                if (window._dexExpenseAdded) {
+                    window._dexExpenseAdded = false;
+                    // Brief delay so user reads Dex's confirmation first
+                    setTimeout(() => location.reload(), 2200);
+                }
+            } catch (err) {
+                typingWrap.remove();
+                addMsg('assistant', 'Network error. Check your connection.');
+            }
+            dexSend.disabled = false;
+            dexInput.focus();
+        }
+
+        dexSend.addEventListener('click', sendMessage);
+        dexInput.addEventListener('keydown', e => {
+            if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
+        });
+    })();
     </script>
     <script>
         // Three-dot menu toggle
