@@ -1,10 +1,11 @@
 import os
 import json
+import random
 import threading
 import resend
 from html import escape
 from calendar import monthrange
-from datetime import datetime, date
+from datetime import datetime, date, timezone, timedelta
 from flask import Blueprint, request, jsonify, session, stream_with_context, Response, current_app
 from models import db, Expense, User
 from utils import login_required
@@ -25,11 +26,12 @@ SYSTEM_PROMPT_TEMPLATE = """You are Dex, a friendly AI financial companion built
 The user's name is {name}. Use their name occasionally to feel personal, but not every message.
 Today's date is {today}.
 
-You have four jobs:
-1. Answer questions about the user's spending using the expense data below.
+You have these jobs:
+1. Answer questions about the user's spending. Only the most recent expenses are listed below — for anything else, use the tools: call find_expenses to list or locate specific expenses (by title, category, mode, amount, date, etc.), and get_spending_summary for any totals, sums, averages, counts, comparisons, biggest expense, most-used payment method, or split balances. Never add up the expense list by hand.
 2. Add new expenses when the user asks, using the create_expense tool.
 3. Edit existing expenses when the user asks, using the update_expense tool.
 4. Delete existing expenses when the user asks, using the delete_expense tool.
+5. Help the user understand how to use Balance Desk (see "HOW BALANCE DESK WORKS" below).
 
 HOW TO ADD AN EXPENSE:
 - Extract what you can from the user's message (title, amount, date, category, payment mode).
@@ -52,20 +54,39 @@ HOW TO ADD AN EXPENSE:
 - Once you have everything, call create_expense immediately without asking for confirmation again.
 
 HOW TO EDIT OR DELETE AN EXPENSE:
-- Each expense in the data below is shown with an ID like "#42" — you need that ID to call update_expense or delete_expense.
-- Match the user's description (title, amount, date, category, "the one I just added", etc.) against the expense data to find the right ID.
+- Each expense is identified by an ID like "#42" — you need that ID to call update_expense or delete_expense.
+- Match the user's description (title, amount, date, category, "the one I just added", etc.) against the recent expense data below to find the right ID. If it's not in that recent list, call find_expenses to look it up first, then use the ID it returns.
 - If exactly one expense clearly matches, act on it directly — no need to ask again.
 - If multiple expenses could match, briefly list the candidates (title, amount, date) and ask which one before doing anything.
+- The most recently added expense is tagged "<-- most recently added" in the data — use it for "the one I just added", "my latest entry", or "my last one".
 - If nothing matches, say so — don't guess an ID.
 - For edits, only change the fields the user mentions; leave everything else as-is.
 - For deletes, since it can't be undone, name the expense (title, amount, date) when confirming you've deleted it.
 
+DELETING MORE THAN ONE EXPENSE (e.g. "delete all my data", "clear my Eating Out expenses", "remove everything from May"):
+- NEVER delete multiple expenses without explicit confirmation, and never fire several single deletes at once.
+- Use the delete_expenses tool. First call it WITHOUT confirmed (delete_all / category / date range as appropriate) — it returns how many expenses match and their total. Relay that to the user ("This will permanently delete 34 expenses totaling $4,274. Are you sure?") and wait.
+- Only after the user clearly says yes, call delete_expenses again with confirmed=true. If they hesitate or say no, do nothing.
+
 ANSWERING SPENDING QUESTIONS:
 - Be concise and conversational — no essays.
-- Use specific numbers when relevant.
-- Format currency as $X.XX.
+- For exact figures, call get_spending_summary and report the numbers it returns; don't compute them from the list yourself (the list only shows recent expenses and may be incomplete).
+- To show or list specific expenses (e.g. "show my Starbucks purchases", "which expenses were over $100", "my UPI payments in March"), call find_expenses and report what it returns.
+- Pick the right arguments: a date range for "this month"/"in May"/"last year", a category filter for "on Eating Out", group_by 'mode' for "which payment method do I use most", group_by 'month' for month-to-month comparisons. For split questions, use the you_owe_others / others_owe_you figures it returns.
+- Use specific numbers when relevant. Format currency as $X.XX.
 - Keep responses under 150 words unless the question genuinely needs more.
-- Never fabricate transactions."""
+- Never fabricate transactions.
+
+HOW BALANCE DESK WORKS (use this to answer "how do I…" questions — explain the steps, you can't do these for the user):
+- Add an expense (manually): click "+ Add expense" on the Dashboard or Expenses page and fill in the form. (Or just tell me the details here and I'll add it.)
+- Edit or delete an expense: go to the Expenses page; each row has edit and delete icons. (Or ask me to do it.)
+- Import from Excel: open the profile menu (top-right) > Profile settings > Import. Download the template, fill in your rows, choose "Add" (append) or "Replace" (overwrite everything), upload the .xlsx, then review and apply.
+- Download the import template: it's the "Download expenses_template.xlsx" link on the Import page — it has example rows and an Instructions tab (delete the example rows before importing).
+- Export to a spreadsheet: profile menu > Profile settings > Export, pick the months you want, then "Export Expenses" to download an .xlsx.
+- Delete all data: there's no one-click wipe — either delete entries individually on the Expenses page, or use Import with "Replace" mode to overwrite everything with a new file.
+
+STAYING ON TOPIC:
+- You only handle personal finance and Balance Desk. If asked something unrelated (weather, trivia, poems, coding, etc.), politely decline in one line and steer back to their spending — don't attempt an answer."""
 
 TOOLS = [
     {
@@ -122,7 +143,7 @@ TOOLS = [
                 "type": "object",
                 "properties": {
                     "expense_id": {
-                        "type": "integer",
+                        "anyOf": [{"type": "integer"}, {"type": "string"}],
                         "description": "The numeric ID of the expense to edit, e.g. 42 for '#42'."
                     },
                     "title": {"type": "string", "description": "New name for the expense."},
@@ -156,26 +177,148 @@ TOOLS = [
                 "type": "object",
                 "properties": {
                     "expense_id": {
-                        "type": "integer",
+                        "anyOf": [{"type": "integer"}, {"type": "string"}],
                         "description": "The numeric ID of the expense to delete, e.g. 42 for '#42'."
                     }
                 },
                 "required": ["expense_id"]
             }
         }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "get_spending_summary",
+            "description": "Compute exact spending figures from the full database. Use this for ANY question involving totals, sums, averages, counts, comparisons across periods, biggest expense, most-used payment method, or how much is owed/owing on splits. Never add up the expense list by hand — call this instead so the numbers are accurate and cover all the user's data, not just the recent ones shown.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "start_date": {
+                        "type": "string",
+                        "description": "Start of the date range (inclusive), YYYY-MM-DD. Omit for all time."
+                    },
+                    "end_date": {
+                        "type": "string",
+                        "description": "End of the date range (inclusive), YYYY-MM-DD. Omit for all time."
+                    },
+                    "category": {
+                        "type": "string",
+                        "description": "Restrict to a single category, e.g. 'Eating Out'. Omit to include all categories."
+                    },
+                    "group_by": {
+                        "type": "string",
+                        "enum": ["category", "mode", "month", "none"],
+                        "description": "How to break down the total: 'category', 'mode' (payment method), 'month', or 'none' for a single overall figure."
+                    }
+                },
+                "required": []
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "delete_expenses",
+            "description": "Delete MULTIPLE expenses at once — e.g. 'delete all my data', 'remove everything from May', 'clear all my Eating Out expenses'. For a single specific expense, use delete_expense instead. This is destructive and irreversible, so it is a TWO-STEP flow: first call it WITHOUT confirmed (or confirmed=false) to get the count, tell the user exactly how many expenses will be deleted and the total, and ask them to confirm; only call it again with confirmed=true after the user clearly says yes.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "delete_all": {
+                        "type": "boolean",
+                        "description": "Set true to delete ALL of the user's expenses (a full data wipe)."
+                    },
+                    "expense_ids": {
+                        "type": "array",
+                        "items": {"anyOf": [{"type": "integer"}, {"type": "string"}]},
+                        "description": "Specific expense IDs to delete, when removing a known set."
+                    },
+                    "category": {
+                        "type": "string",
+                        "description": "Delete only expenses in this category, e.g. 'Eating Out'."
+                    },
+                    "start_date": {
+                        "type": "string",
+                        "description": "Only delete expenses on or after this date (YYYY-MM-DD)."
+                    },
+                    "end_date": {
+                        "type": "string",
+                        "description": "Only delete expenses on or before this date (YYYY-MM-DD)."
+                    },
+                    "confirmed": {
+                        "type": "boolean",
+                        "description": "Must be true to actually delete. Only set true AFTER the user has explicitly confirmed in their latest message."
+                    }
+                },
+                "required": []
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "find_expenses",
+            "description": "Search the user's expenses with filters and get back the matching rows (each with its #ID). Use this to LIST or LOCATE specific expenses — e.g. 'show my Starbucks expenses', 'what did I buy at Walmart', 'find expenses over $100', 'my UPI payments in March' — and to look up the #ID of an expense you need to edit or delete when it isn't in the recent list shown to you. For totals, sums, counts, or comparisons, use get_spending_summary instead. For a date/month/year RANGE, use start_date and end_date.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "category": {"type": "string", "description": "Exact category, e.g. 'Eating Out'."},
+                    "mode": {"type": "string", "description": "Exact payment method, e.g. 'Cash', 'UPI'."},
+                    "title": {"type": "string", "description": "Exact expense title."},
+                    "title_contains": {"type": "string", "description": "Match titles containing this text (partial/substring match)."},
+                    "description_contains": {"type": "string", "description": "Match descriptions containing this text."},
+                    "amount": {"type": "number", "description": "Exact amount."},
+                    "min_amount": {"type": "number", "description": "Amount greater than or equal to this."},
+                    "max_amount": {"type": "number", "description": "Amount less than or equal to this."},
+                    "start_date": {"type": "string", "description": "On or after this date (YYYY-MM-DD). Use with end_date for any range, including month or year ranges."},
+                    "end_date": {"type": "string", "description": "On or before this date (YYYY-MM-DD)."},
+                    "month": {"type": "integer", "description": "Single calendar month 1-12 (combine with year; defaults to the current year if year is omitted)."},
+                    "year": {"type": "integer", "description": "Single year, e.g. 2026. Alone, matches the whole year; with month, that one month."},
+                    "paid_by_user": {"type": "boolean", "description": "True for expenses the user paid; false for ones someone else paid."},
+                    "is_split": {"type": "boolean", "description": "True to return only split expenses; false for only non-split."},
+                    "sort_by": {"type": "string", "enum": ["date", "amount", "recent"], "description": "Sort by 'date', 'amount', or 'recent' (most recently added)."},
+                    "order": {"type": "string", "enum": ["asc", "desc"], "description": "Sort direction. Defaults to desc."},
+                    "limit": {"type": "integer", "description": "Max rows to return (default 20, max 50)."}
+                },
+                "required": []
+            }
+        }
     }
 ]
 
+# Tools that change the user's data — only these should trigger a frontend refresh.
+MUTATING_TOOLS = {'create_expense', 'update_expense', 'delete_expense', 'delete_expenses'}
 
-STARTER_PROMPT_TEMPLATE = """Based on this user's recent expense data, write exactly 3 short example messages they could send to Dex (their AI financial companion) — the kind of thing that'd appear as tappable suggestion chips the moment they open the chat.
+# Human-friendly labels shown in the chat while a tool runs ("what Dex is doing").
+TOOL_LABELS = {
+    'create_expense': 'Adding your expense',
+    'update_expense': 'Updating your expense',
+    'delete_expense': 'Deleting your expense',
+    'delete_expenses': 'Deleting expenses',
+    'get_spending_summary': 'Crunching your spending data',
+    'find_expenses': 'Searching your expenses',
+}
+
+# How many recent expenses to inline into the prompt. Everything beyond this is
+# reachable via find_expenses / get_spending_summary, keeping per-message tokens low.
+RECENT_CONTEXT_LIMIT = 15
+
+
+# How many starters to generate per pool, and how many to show per chat open.
+STARTER_POOL_SIZE = 10
+STARTERS_SHOWN = 3
+# Regenerate the pool only after it's this old — keeps LLM calls rare.
+STARTERS_TTL = timedelta(days=7)
+
+STARTER_PROMPT_TEMPLATE = """Based on this user's recent expense data, write exactly {pool_size} short example messages they could send to Dex (their AI financial companion) — the kind of thing that'd appear as tappable suggestion chips the moment they open the chat.
 
 Make them feel personal and fresh by referencing things you actually see in their data below: real category names, merchants/titles, amounts, or patterns (e.g. "How much did I spend on Eating Out in May?", "Add a $14 lunch at Chipotle today", "What's my biggest expense this month?").
 
 Requirements:
-- Exactly 3 examples, each a natural first-person message a user would type — under 12 words.
-- Vary the type: mix at least one spending question with one "log an expense" example.
+- Exactly {pool_size} examples, each a natural first-person message a user would type — under 12 words.
+- Make them varied: mix spending questions, "log an expense" examples, and edit/delete examples. Avoid near-duplicates.
+- Refer to expenses by their title/amount/date (e.g. "Delete my $40 Walmart expense"), never by raw #ID numbers — users don't know those.
 - No numbering, quotes, or extra commentary.
-- Return ONLY a raw JSON array of 3 strings — nothing else.
+- Return ONLY a raw JSON array of {pool_size} strings — nothing else.
 
 USER'S EXPENSE DATA:
 {expense_data}"""
@@ -243,21 +386,36 @@ def _notify_dex_error(user, error_text: str, messages: list | None = None) -> No
 
 
 def _build_expense_context(user_id: int) -> str:
-    expenses = (Expense.query
-                .filter_by(user_id=user_id)
-                .order_by(Expense.date.desc())
-                .limit(200)
-                .all())
-
-    if not expenses:
+    base = Expense.query.filter_by(user_id=user_id)
+    total = base.count()
+    if total == 0:
         return "No expenses recorded yet."
 
-    lines = ["Recent expenses (newest first — #ID is needed to edit or delete one):"]
+    expenses = (base.order_by(Expense.date.desc(), Expense.id.desc())
+                .limit(RECENT_CONTEXT_LIMIT)
+                .all())
+
+    earliest = base.order_by(Expense.date.asc()).first().date
+    latest = expenses[0].date
+
+    # Highest id = most recently added row (ids are monotonic on insert), which can
+    # differ from the newest by date if the user backdated it. Mark it so Dex can
+    # resolve "the one I just added" / "my latest entry" reliably.
+    newest_added_id = max(e.id for e in expenses)
+
+    header = (
+        f"The user has {total} expense(s) in total, from {earliest.strftime('%b %d, %Y')} "
+        f"to {latest.strftime('%b %d, %Y')}. Only the {len(expenses)} most recent are listed below "
+        f"(newest first). To find or act on any expense NOT in this list, call find_expenses to look "
+        f"it up; for totals, sums, or comparisons, call get_spending_summary. #ID is needed to edit or delete one."
+    )
+    lines = [header, ""]
     for e in expenses:
         split_note = f" (split: ${e.split:.2f} is my share)" if e.split is not None else ""
         paid_note = "" if e.paid_by_user else " (paid by someone else)"
+        added_note = "  <-- most recently added" if e.id == newest_added_id else ""
         lines.append(
-            f"- #{e.id} | {e.date.strftime('%b %d, %Y')} | {e.title} | {e.category} | ${e.amount:.2f}{split_note}{paid_note} | mode: {e.mode or 'N/A'}"
+            f"- #{e.id} | {e.date.strftime('%b %d, %Y')} | {e.title} | {e.category} | ${e.amount:.2f}{split_note}{paid_note} | mode: {e.mode or 'N/A'}{added_note}"
         )
     return "\n".join(lines)
 
@@ -358,6 +516,199 @@ def _execute_delete_expense(user_id: int, args: dict) -> dict:
         return {'success': False, 'error': str(e)}
 
 
+def _execute_get_spending_summary(user_id: int, args: dict) -> dict:
+    """Read-only aggregation over the user's expenses — totals, breakdowns, top items, split balances."""
+    try:
+        q = Expense.query.filter_by(user_id=user_id)
+
+        if args.get('start_date'):
+            start = datetime.strptime(args['start_date'], '%Y-%m-%d').date()
+            q = q.filter(Expense.date >= start)
+        if args.get('end_date'):
+            end = datetime.strptime(args['end_date'], '%Y-%m-%d').date()
+            q = q.filter(Expense.date <= end)
+        if args.get('category'):
+            q = q.filter(db.func.lower(Expense.category) == str(args['category']).strip().lower())
+
+        expenses = q.all()
+        if not expenses:
+            return {'success': True, 'count': 0, 'total': 0.0,
+                    'note': 'No expenses match that filter.'}
+
+        result = {
+            'success': True,
+            'count': len(expenses),
+            'total': round(sum(e.amount for e in expenses), 2),
+            'you_owe_others': round(sum(e.you_owe for e in expenses), 2),
+            'others_owe_you': round(sum(e.friend_owes for e in expenses), 2),
+        }
+
+        group_by = (args.get('group_by') or 'none').lower()
+        if group_by in ('category', 'mode', 'month'):
+            buckets = {}
+            for e in expenses:
+                if group_by == 'category':
+                    key = e.category or 'Uncategorized'
+                elif group_by == 'mode':
+                    key = e.mode or 'Unknown'
+                else:
+                    key = e.date.strftime('%Y-%m')
+                slot = buckets.setdefault(key, {'total': 0.0, 'count': 0})
+                slot['total'] += e.amount
+                slot['count'] += 1
+            result['breakdown'] = {
+                k: {'total': round(v['total'], 2), 'count': v['count']}
+                for k, v in sorted(buckets.items(), key=lambda kv: kv[1]['total'], reverse=True)
+            }
+
+        top = sorted(expenses, key=lambda e: e.amount, reverse=True)[:5]
+        result['top_expenses'] = [
+            {'id': e.id, 'title': e.title, 'amount': round(e.amount, 2),
+             'date': e.date.strftime('%Y-%m-%d'), 'category': e.category}
+            for e in top
+        ]
+        return result
+    except Exception as e:
+        return {'success': False, 'error': str(e)}
+
+
+def _execute_delete_expenses(user_id: int, args: dict) -> dict:
+    """Bulk delete with a mandatory two-step confirmation. Deletes only when confirmed=true."""
+    try:
+        q = Expense.query.filter_by(user_id=user_id)
+        delete_all = bool(args.get('delete_all'))
+        ids = args.get('expense_ids') or []
+
+        if not delete_all:
+            if ids:
+                q = q.filter(Expense.id.in_([int(i) for i in ids]))
+            else:
+                has_filter = False
+                if args.get('category'):
+                    q = q.filter(db.func.lower(Expense.category) == str(args['category']).strip().lower())
+                    has_filter = True
+                if args.get('start_date'):
+                    q = q.filter(Expense.date >= datetime.strptime(args['start_date'], '%Y-%m-%d').date())
+                    has_filter = True
+                if args.get('end_date'):
+                    q = q.filter(Expense.date <= datetime.strptime(args['end_date'], '%Y-%m-%d').date())
+                    has_filter = True
+                # Refuse an unscoped wipe unless delete_all is explicitly set.
+                if not has_filter:
+                    return {'success': False,
+                            'error': 'Nothing specified to delete. Set delete_all=true for a full wipe, or give a filter (ids, category, or date range).'}
+
+        matches = q.all()
+        count = len(matches)
+        if count == 0:
+            return {'success': True, 'deleted': 0, 'message': 'No matching expenses to delete.'}
+
+        total = round(sum(e.amount for e in matches), 2)
+
+        # Gate: never delete more than one expense without explicit confirmation.
+        if not bool(args.get('confirmed')):
+            sample = [f"{e.title} (${e.amount:.2f}, {e.date.strftime('%b %d, %Y')})"
+                      for e in matches[:5]]
+            return {
+                'success': False,
+                'needs_confirmation': True,
+                'count': count,
+                'total': total,
+                'sample': sample,
+                'message': (f"This will permanently delete {count} expense(s) totaling "
+                            f"${total:.2f}. Do NOT proceed until the user explicitly confirms."),
+            }
+
+        for e in matches:
+            db.session.delete(e)
+        db.session.commit()
+        return {'success': True, 'deleted': count, 'total': total,
+                'message': f"Deleted {count} expense(s) totaling ${total:.2f}."}
+    except Exception as e:
+        db.session.rollback()
+        return {'success': False, 'error': str(e)}
+
+
+def _execute_find_expenses(user_id: int, args: dict) -> dict:
+    """Read-only search over the user's expenses with flexible filters. Returns matching rows + #IDs."""
+    try:
+        def val(name):
+            v = args.get(name)
+            return v if v not in (None, '') else None
+
+        q = Expense.query.filter_by(user_id=user_id)
+
+        if val('category'):
+            q = q.filter(db.func.lower(Expense.category) == str(args['category']).strip().lower())
+        if val('mode'):
+            q = q.filter(db.func.lower(Expense.mode) == str(args['mode']).strip().lower())
+        if val('title'):
+            q = q.filter(db.func.lower(Expense.title) == str(args['title']).strip().lower())
+        if val('title_contains'):
+            q = q.filter(Expense.title.ilike(f"%{str(args['title_contains']).strip()}%"))
+        if val('description_contains'):
+            q = q.filter(Expense.description.ilike(f"%{str(args['description_contains']).strip()}%"))
+        if val('amount') is not None:
+            q = q.filter(Expense.amount == round(float(args['amount']), 2))
+        if val('min_amount') is not None:
+            q = q.filter(Expense.amount >= float(args['min_amount']))
+        if val('max_amount') is not None:
+            q = q.filter(Expense.amount <= float(args['max_amount']))
+        if val('start_date'):
+            q = q.filter(Expense.date >= datetime.strptime(args['start_date'], '%Y-%m-%d').date())
+        if val('end_date'):
+            q = q.filter(Expense.date <= datetime.strptime(args['end_date'], '%Y-%m-%d').date())
+
+        # Single month / year convenience (ranges should use start_date/end_date).
+        year = int(args['year']) if val('year') is not None else None
+        month = int(args['month']) if val('month') is not None else None
+        if year is not None and month is not None:
+            last = monthrange(year, month)[1]
+            q = q.filter(Expense.date >= date(year, month, 1), Expense.date <= date(year, month, last))
+        elif year is not None:
+            q = q.filter(Expense.date >= date(year, 1, 1), Expense.date <= date(year, 12, 31))
+        elif month is not None:
+            yr = date.today().year
+            last = monthrange(yr, month)[1]
+            q = q.filter(Expense.date >= date(yr, month, 1), Expense.date <= date(yr, month, last))
+
+        if args.get('paid_by_user') is not None:
+            q = q.filter(Expense.paid_by_user == bool(args['paid_by_user']))
+        if args.get('is_split') is not None:
+            q = q.filter(Expense.split.isnot(None) if bool(args['is_split']) else Expense.split.is_(None))
+
+        sort_col = {'date': Expense.date, 'amount': Expense.amount,
+                    'recent': Expense.id}.get((args.get('sort_by') or 'date').lower(), Expense.date)
+        descending = (args.get('order') or 'desc').lower() != 'asc'
+        q = q.order_by(sort_col.desc() if descending else sort_col.asc(), Expense.id.desc())
+
+        try:
+            limit = max(1, min(int(args.get('limit') or 20), 50))
+        except (ValueError, TypeError):
+            limit = 20
+
+        match_count = q.count()
+        rows = q.limit(limit).all()
+        return {
+            'success': True,
+            'match_count': match_count,
+            'returned': len(rows),
+            'expenses': [{
+                'id': e.id,
+                'date': e.date.strftime('%Y-%m-%d'),
+                'title': e.title,
+                'category': e.category,
+                'mode': e.mode or '',
+                'amount': round(e.amount, 2),
+                'split': round(e.split, 2) if e.split is not None else None,
+                'paid_by_user': e.paid_by_user,
+                'description': e.description or '',
+            } for e in rows],
+        }
+    except Exception as e:
+        return {'success': False, 'error': str(e)}
+
+
 @dex_bp.route('/api/dex/chat', methods=['POST'])
 @login_required
 def chat():
@@ -419,14 +770,39 @@ def chat():
                     'create_expense': _execute_create_expense,
                     'update_expense': _execute_update_expense,
                     'delete_expense': _execute_delete_expense,
+                    'delete_expenses': _execute_delete_expenses,
+                    'get_spending_summary': _execute_get_spending_summary,
+                    'find_expenses': _execute_find_expenses,
                 }
+
+                # Safety: if the model tries to delete several expenses via repeated
+                # single-delete calls in one turn, block them and steer it to the
+                # confirmed bulk-delete flow instead.
+                single_deletes = sum(1 for tc in assistant_msg.tool_calls
+                                     if tc.function.name == 'delete_expense')
 
                 for tc in assistant_msg.tool_calls:
                     executor = executors.get(tc.function.name)
                     if executor:
+                        if tc.function.name == 'delete_expense' and single_deletes > 1:
+                            tool_result_msgs.append({
+                                'role': 'tool',
+                                'tool_call_id': tc.id,
+                                'content': json.dumps({
+                                    'success': False,
+                                    'error': ('Deleting multiple expenses at once requires '
+                                              'confirmation. Use the delete_expenses tool: preview '
+                                              'the count, ask the user to confirm, then set confirmed=true.'),
+                                }),
+                            })
+                            continue
+
+                        # Tell the frontend what Dex is doing before it runs.
+                        label = TOOL_LABELS.get(tc.function.name, 'Working on it')
+                        yield f"data: {json.dumps({'event': 'tool_activity', 'label': label})}\n\n"
                         args = json.loads(tc.function.arguments)
                         result = executor(user_id, args)
-                        if result.get('success'):
+                        if result.get('success') and tc.function.name in MUTATING_TOOLS:
                             data_changed = True
                         tool_result_msgs.append({
                             'role': 'tool',
@@ -485,37 +861,82 @@ def chat():
                     headers={'Cache-Control': 'no-cache', 'X-Accel-Buffering': 'no'})
 
 
-@dex_bp.route('/api/dex/starters', methods=['GET'])
-@login_required
-def starters():
-    """Three fresh, data-aware example prompts Dex generates for itself each time the chat opens."""
+def _read_cached_pool(user) -> list | None:
+    """Return the user's cached starter pool if it exists and is still fresh, else None."""
+    if not user or not user.dex_starters or not user.dex_starters_at:
+        return None
+    generated_at = user.dex_starters_at
+    if generated_at.tzinfo is None:
+        generated_at = generated_at.replace(tzinfo=timezone.utc)
+    if datetime.now(timezone.utc) - generated_at > STARTERS_TTL:
+        return None
+    try:
+        pool = json.loads(user.dex_starters)
+    except (ValueError, TypeError):
+        return None
+    cleaned = [str(s).strip() for s in pool if str(s).strip()]
+    return cleaned or None
+
+
+def _generate_starter_pool(user_id: int) -> list:
+    """Ask the LLM for a fresh pool of starter prompts. Returns [] on any failure."""
     api_key = os.environ.get('GROQ_API_KEY', '').strip()
     if not api_key:
-        return jsonify({'starters': DEFAULT_STARTERS})
-
+        return []
     try:
         from groq import Groq
     except ImportError:
-        return jsonify({'starters': DEFAULT_STARTERS})
+        return []
 
-    user_id = session['user_id']
     context = _build_expense_context(user_id)
-
     try:
         client = Groq(api_key=api_key)
         response = client.chat.completions.create(
             model='llama-3.3-70b-versatile',
-            messages=[{'role': 'user', 'content': STARTER_PROMPT_TEMPLATE.format(expense_data=context)}],
-            max_tokens=200,
+            messages=[{'role': 'user', 'content': STARTER_PROMPT_TEMPLATE.format(
+                pool_size=STARTER_POOL_SIZE, expense_data=context)}],
+            max_tokens=500,
             temperature=1.0,
         )
         raw = (response.choices[0].message.content or '').strip()
         raw = raw.strip('`').removeprefix('json').strip()
         parsed = json.loads(raw)
-        cleaned = [str(s).strip() for s in parsed if str(s).strip()][:3]
-        if len(cleaned) == 3:
-            return jsonify({'starters': cleaned})
+        # De-duplicate while preserving order.
+        seen, cleaned = set(), []
+        for s in parsed:
+            text = str(s).strip()
+            if text and text.lower() not in seen:
+                seen.add(text.lower())
+                cleaned.append(text)
+        return cleaned
     except Exception:
-        pass
+        return []
 
-    return jsonify({'starters': DEFAULT_STARTERS})
+
+def _save_starter_pool(user, pool: list) -> None:
+    try:
+        user.dex_starters = json.dumps(pool)
+        user.dex_starters_at = datetime.now(timezone.utc)
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
+
+
+@dex_bp.route('/api/dex/starters', methods=['GET'])
+@login_required
+def starters():
+    """Serve 3 starter chips sampled from a per-user pool, regenerating the pool only when stale."""
+    user_id = session['user_id']
+    user = db.session.get(User, user_id)
+
+    pool = _read_cached_pool(user)
+    if pool is None:
+        pool = _generate_starter_pool(user_id)
+        if pool:
+            _save_starter_pool(user, pool)
+
+    if not pool:
+        pool = DEFAULT_STARTERS
+
+    count = min(STARTERS_SHOWN, len(pool))
+    return jsonify({'starters': random.sample(pool, count)})

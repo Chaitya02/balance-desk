@@ -17,6 +17,11 @@ class User(db.Model):
     verification_token = db.Column(db.String(64), nullable=True)
     created_at         = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
 
+    # Cached pool of Dex starter prompts (JSON list) + when it was generated,
+    # so we don't hit the LLM every time the chat opens.
+    dex_starters    = db.Column(db.Text, nullable=True)
+    dex_starters_at = db.Column(db.DateTime, nullable=True)
+
     expenses = db.relationship('Expense', backref='user', lazy='dynamic',
                                order_by='Expense.date.desc()')
 

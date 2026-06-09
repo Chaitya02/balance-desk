@@ -79,13 +79,18 @@ def create_app():
     with app.app_context():
         db.create_all()
         with db.engine.connect() as conn:
-            try:
-                conn.execute(db.text(
-                    "ALTER TABLE expenses ADD COLUMN paid_by_user BOOLEAN NOT NULL DEFAULT 1"
-                ))
-                conn.commit()
-            except Exception:
-                pass
+            # Lightweight, idempotent column adds for existing databases.
+            migrations = [
+                "ALTER TABLE expenses ADD COLUMN paid_by_user BOOLEAN NOT NULL DEFAULT 1",
+                "ALTER TABLE users ADD COLUMN dex_starters TEXT",
+                "ALTER TABLE users ADD COLUMN dex_starters_at DATETIME",
+            ]
+            for stmt in migrations:
+                try:
+                    conn.execute(db.text(stmt))
+                    conn.commit()
+                except Exception:
+                    conn.rollback()
 
     return app
 

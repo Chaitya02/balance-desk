@@ -1,0 +1,69 @@
+================================================================
+DEX TEST PROMPTS — Balance Desk AI Companion
+================================================================
+A spread of ~25 prompts to stress-test Dex across many situations.
+Each section notes what behavior you're checking for.
+
+
+----------------------------------------------------------------
+A. TYPOS / MISSPELLINGS  (can Dex still understand?)
+----------------------------------------------------------------
+1.  hw mch did i spnd this mnth?
+2.  add a $15 cofee from todey
+3.  wats my bigest expence catagory?
+4.  delet my latst entrey
+
+
+----------------------------------------------------------------
+B. NONSENSE / GIBBERISH  (should ask for clarification, not invent)
+----------------------------------------------------------------
+5.  asdf jkl qwerty zxcv
+6.  banana telephone montney spend purple
+7.  ????
+
+
+----------------------------------------------------------------
+C. MISSING DETAIL  (should ask a follow-up, never guess the amount)
+----------------------------------------------------------------
+8.  Add a coffee expense from today
+9.  I bought groceries yesterday
+10. Log my Uber ride
+11. Update my rent payment          (which one? new amount?)
+12. Change the category of my last expense
+
+
+----------------------------------------------------------------
+D. UNDERSTANDING FROM PAST ENTRIES  (must use the expense data)
+----------------------------------------------------------------
+13. How much have I spent on Eating Out this month?
+14. What's my single biggest expense so far?
+15. Which payment method do I use the most?
+16. Delete the one I just added
+17. How much do I owe friends from split expenses?
+18. Compare my spending this month vs last month
+
+
+----------------------------------------------------------------
+E. OFF-TOPIC / UNRELATED  (should politely decline & redirect)
+----------------------------------------------------------------
+19. What's the weather like today?
+20. Write me a poem about the ocean
+21. Who won the last World Cup?
+
+
+----------------------------------------------------------------
+F. HOW-TO / APP USAGE QUESTIONS  (explain the steps in Balance Desk)
+----------------------------------------------------------------
+22. How do I add a new expense manually?
+23. How do I delete all my data?
+24. How do I import my expenses from an Excel file?
+25. Where do I download the import template, and how do I fill it in?
+26. How do I export my expenses to a spreadsheet?
+
+
+----------------------------------------------------------------
+G. EDGE / VALIDATION CHECKS  (boundaries & guards)
+----------------------------------------------------------------
+27. Add a $50 dinner dated December 31, 2030     (too far in future — should refuse)
+28. Add a $20 lunch I split 50/50 with a friend who paid
+29. Delete expense #999999                        (no such ID — should say so)

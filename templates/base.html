@@ -312,10 +312,43 @@
                     return;
                 }
 
-                const bubble = addMsg('assistant', '');
                 const reader = resp.body.getReader();
                 const decoder = new TextDecoder();
                 let aiText = '';
+                let bubble = null;
+                let activityWrap = null;
+
+                // Create the assistant text bubble only once real text arrives,
+                // so any "what Dex is doing" activity pills render above it.
+                function ensureBubble() {
+                    if (!bubble) bubble = addMsg('assistant', '');
+                    return bubble;
+                }
+
+                function addActivity(label) {
+                    if (!activityWrap) {
+                        activityWrap = document.createElement('div');
+                        activityWrap.className = 'dex-activity';
+                        dexMsgs.appendChild(activityWrap);
+                    }
+                    const item = document.createElement('div');
+                    item.className = 'dex-activity-item';
+                    const spin = document.createElement('span');
+                    spin.className = 'dex-activity-spin';
+                    const text = document.createElement('span');
+                    text.textContent = label;
+                    item.append(spin, text);
+                    activityWrap.appendChild(item);
+                    dexMsgs.scrollTop = dexMsgs.scrollHeight;
+                }
+
+                function settleActivity() {
+                    if (activityWrap && !activityWrap.dataset.done) {
+                        activityWrap.dataset.done = '1';
+                        activityWrap.querySelectorAll('.dex-activity-item')
+                            .forEach(el => el.classList.add('dex-activity-item--done'));
+                    }
+                }
 
                 while (true) {
                     const { done, value } = await reader.read();
@@ -327,19 +360,24 @@
                         if (payload === '[DONE]') break;
                         try {
                             const parsed = JSON.parse(payload);
-                            if (parsed.error) { bubble.textContent = parsed.error; break; }
+                            if (parsed.error) { ensureBubble().textContent = parsed.error; break; }
+                            if (parsed.event === 'tool_activity') {
+                                addActivity(parsed.label);
+                            }
                             if (parsed.event === 'data_changed') {
                                 // Reload page after stream finishes so the change appears
                                 window._dexDataChanged = true;
                             }
                             if (parsed.content) {
+                                settleActivity();
                                 aiText += parsed.content;
-                                bubble.textContent = aiText;
+                                ensureBubble().textContent = aiText;
                                 dexMsgs.scrollTop = dexMsgs.scrollHeight;
                             }
                         } catch {}
                     }
                 }
+                settleActivity();
                 history.push({ role: 'assistant', content: aiText });
                 persistHistory();
                 if (window._dexDataChanged) {
