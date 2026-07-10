@@ -61,6 +61,26 @@
                 </form>
             </div>
 
+            <!-- Appearance -->
+            <div class="profile-card">
+                <h2 class="profile-card-title">Appearance</h2>
+                <p class="profile-card-hint">Choose how Balance Desk looks on this device. System follows your device setting.</p>
+                <div class="theme-seg" id="themeSeg" role="radiogroup" aria-label="Theme preference">
+                    <button type="button" class="theme-seg-btn" data-theme-pref="light" role="radio">
+                        <svg width="15" height="15" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="3.25" stroke="currentColor" stroke-width="1.4"/><path d="M8 1v1.8M8 13.2V15M15 8h-1.8M2.8 8H1M12.95 3.05l-1.27 1.27M4.32 11.68l-1.27 1.27M12.95 12.95l-1.27-1.27M4.32 4.32L3.05 3.05" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
+                        Light
+                    </button>
+                    <button type="button" class="theme-seg-btn" data-theme-pref="dark" role="radio">
+                        <svg width="15" height="15" viewBox="0 0 16 16" fill="none"><path d="M13.5 9.5A6 6 0 016.5 2.5a6 6 0 107 7z" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/></svg>
+                        Dark
+                    </button>
+                    <button type="button" class="theme-seg-btn" data-theme-pref="system" role="radio">
+                        <svg width="15" height="15" viewBox="0 0 16 16" fill="none"><rect x="1.5" y="2.5" width="13" height="9" rx="1.5" stroke="currentColor" stroke-width="1.4"/><path d="M5.5 14h5M8 11.5V14" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
+                        System
+                    </button>
+                </div>
+            </div>
+
             <!-- Password -->
             <div class="profile-card">
                 {% if user.password_hash %}
@@ -131,4 +151,27 @@
     </div>
 </section>
 
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function () {
+    const btns = document.querySelectorAll('#themeSeg .theme-seg-btn');
+
+    function refresh() {
+        let pref = 'system';
+        try { pref = localStorage.getItem('theme') || 'system'; } catch (e) {}
+        btns.forEach(b => {
+            const active = b.dataset.themePref === pref;
+            b.classList.toggle('theme-seg-btn--active', active);
+            b.setAttribute('aria-checked', active);
+        });
+    }
+
+    btns.forEach(b => b.addEventListener('click', () => window.setThemePref(b.dataset.themePref)));
+    // Keeps the control in sync if the navbar/footer toggle is used on this page
+    window.addEventListener('themechange', refresh);
+    refresh();
+})();
+</script>
 {% endblock %}

@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+
+{% block title %}The Story of Dex — Balance Desk{% endblock %}
+
+{% block content %}
+<section class="dex-story-page">
+
+    <div class="dex-story-hero">
+        <!-- Dex, front and center -->
+        <div class="dex-story-fox" aria-hidden="true">
+            {% include "_dex_fox.html" %}
+        </div>
+
+        <div class="hero-badge">Dex's Story</div>
+        <h1 class="dex-story-title">The story of Dex</h1>
+        <p class="dex-story-sub">How a curious little fox became Balance Desk's resident money companion.</p>
+    </div>
+
+    <!-- The story goes here — replace the placeholder below when it's written -->
+    <div class="dex-story-body">
+        <p class="dex-story-placeholder">
+            Dex's full story is still being written. Check back soon. 🦊
+        </p>
+    </div>
+
+    <div class="dex-story-back">
+        <a href="{{ url_for('main.landing') }}" class="btn-ghost">
+            <svg width="15" height="15" viewBox="0 0 16 16" fill="none"><path d="M13 8H3M7 4L3 8l4 4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            Back to home
+        </a>
+    </div>
+
+</section>
+{% endblock %}

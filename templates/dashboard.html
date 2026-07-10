@@ -219,6 +219,18 @@ document.querySelectorAll('.cat-icon-badge[data-category]').forEach(el => {
         borderSkipped: false,
     }));
 
+    // Axis colors follow the active theme's CSS variables
+    function themeColors() {
+        const s = getComputedStyle(document.documentElement);
+        return {
+            border: s.getPropertyValue('--border').trim(),
+            borderSoft: s.getPropertyValue('--border-soft').trim(),
+            inkMuted: s.getPropertyValue('--ink-muted').trim(),
+            inkFaint: s.getPropertyValue('--ink-faint').trim(),
+        };
+    }
+    let tc = themeColors();
+
     const chart = new Chart(document.getElementById('yearlyChart'), {
         type: 'bar',
         data: { labels: raw.labels, datasets },
@@ -248,21 +260,30 @@ document.querySelectorAll('.cat-icon-badge[data-category]').forEach(el => {
                 x: {
                     stacked: true,
                     grid: { display: false },
-                    border: { color: '#e0ddd6' },
-                    ticks: { font: { size: 12, family: 'Helvetica, Arial, sans-serif' }, color: '#666666' }
+                    border: { color: tc.border },
+                    ticks: { font: { size: 12, family: 'Helvetica, Arial, sans-serif' }, color: tc.inkMuted }
                 },
                 y: {
                     stacked: true,
-                    grid: { color: '#eae7e0' },
+                    grid: { color: tc.borderSoft },
                     border: { dash: [4, 4], color: 'transparent' },
                     ticks: {
                         font: { size: 11, family: 'Helvetica, Arial, sans-serif' },
-                        color: '#999999',
+                        color: tc.inkFaint,
                         callback: v => '$' + v.toLocaleString()
                     }
                 }
             }
         }
+    });
+
+    window.addEventListener('themechange', () => {
+        tc = themeColors();
+        chart.options.scales.x.border.color = tc.border;
+        chart.options.scales.x.ticks.color  = tc.inkMuted;
+        chart.options.scales.y.grid.color   = tc.borderSoft;
+        chart.options.scales.y.ticks.color  = tc.inkFaint;
+        chart.update();
     });
 
     /* ── footer updater ─────────────────────────────────── */

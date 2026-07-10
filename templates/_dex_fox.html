@@ -1,0 +1,92 @@
+{# Dex the fox — shared pixel-art SVG. Same group classes as the chat pet
+   (.fox-tail / .fox-ear-r / .fox-eyes) so the idle animations and the wink
+   in style.css apply wherever this is included. Size it via the parent. #}
+<svg viewBox="0 0 18 12" shape-rendering="crispEdges">
+    <g class="fox">
+        <!-- bushy tail sweeping up behind, white tip -->
+        <g class="fox-tail">
+            <rect x="15" y="3" width="3" height="1" fill="#f5fff9"/>
+            <rect x="14" y="4" width="1" height="1" fill="#4fb87f"/>
+            <rect x="15" y="4" width="3" height="1" fill="#f5fff9"/>
+            <rect x="13" y="5" width="3" height="1" fill="#4fb87f"/>
+            <rect x="16" y="5" width="2" height="1" fill="#f5fff9"/>
+            <rect x="12" y="6" width="5" height="1" fill="#4fb87f"/>
+            <rect x="17" y="6" width="1" height="1" fill="#1f6b46"/>
+            <rect x="12" y="7" width="4" height="1" fill="#4fb87f"/>
+            <rect x="16" y="7" width="1" height="1" fill="#1f6b46"/>
+            <rect x="12" y="8" width="3" height="1" fill="#4fb87f"/>
+            <rect x="15" y="8" width="1" height="1" fill="#1f6b46"/>
+            <rect x="12" y="9" width="2" height="1" fill="#4fb87f"/>
+            <rect x="14" y="9" width="1" height="1" fill="#1f6b46"/>
+        </g>
+
+        <!-- dark outline -->
+        <g fill="#1f6b46">
+            <rect x="2" y="0" width="1" height="1"/>
+            <rect x="1" y="1" width="1" height="1"/>
+            <rect x="3" y="1" width="1" height="1"/>
+            <rect x="1" y="2" width="1" height="1"/>
+            <rect x="4" y="2" width="1" height="1"/>
+            <rect x="1" y="3" width="1" height="1"/>
+            <rect x="10" y="3" width="1" height="1"/>
+            <rect x="0" y="4" width="1" height="6"/>
+            <rect x="11" y="4" width="1" height="6"/>
+            <rect x="2" y="11" width="3" height="1"/>
+            <rect x="7" y="11" width="3" height="1"/>
+        </g>
+
+        <!-- green fur -->
+        <g fill="#4fb87f">
+            <rect x="2" y="1" width="1" height="1"/>
+            <rect x="2" y="2" width="2" height="1"/>
+            <rect x="2" y="3" width="8" height="1"/>
+            <rect x="1" y="4" width="10" height="1"/>
+            <rect x="1" y="5" width="10" height="1"/>
+            <rect x="1" y="6" width="2" height="1"/>
+            <rect x="5" y="6" width="2" height="1"/>
+            <rect x="9" y="6" width="2" height="1"/>
+            <rect x="1" y="7" width="2" height="1"/>
+            <rect x="9" y="7" width="2" height="1"/>
+            <rect x="1" y="8" width="1" height="1"/>
+            <rect x="10" y="8" width="1" height="1"/>
+            <rect x="1" y="9" width="1" height="1"/>
+            <rect x="10" y="9" width="1" height="1"/>
+            <rect x="2" y="10" width="3" height="1"/>
+            <rect x="7" y="10" width="3" height="1"/>
+        </g>
+
+        <!-- light mint muzzle -->
+        <g fill="#aee8c9">
+            <rect x="5" y="7" width="2" height="1"/>
+            <rect x="2" y="8" width="3" height="1"/>
+            <rect x="7" y="8" width="3" height="1"/>
+            <rect x="2" y="9" width="8" height="1"/>
+        </g>
+
+        <!-- nose -->
+        <rect x="5" y="8" width="2" height="1" fill="#15241d"/>
+
+        <!-- right ear (twitches) -->
+        <g class="fox-ear-r">
+            <rect x="9"  y="0" width="1" height="1" fill="#1f6b46"/>
+            <rect x="8"  y="1" width="1" height="1" fill="#1f6b46"/>
+            <rect x="9"  y="1" width="1" height="1" fill="#4fb87f"/>
+            <rect x="10" y="1" width="1" height="1" fill="#1f6b46"/>
+            <rect x="7"  y="2" width="1" height="1" fill="#1f6b46"/>
+            <rect x="8"  y="2" width="2" height="1" fill="#4fb87f"/>
+            <rect x="10" y="2" width="1" height="1" fill="#1f6b46"/>
+        </g>
+
+        <!-- eyes (blink / wink) with catchlight sparkle -->
+        <g class="fox-eyes">
+            <g class="fox-eye-l">
+                <rect x="3" y="6" width="2" height="2" fill="#15241d"/>
+                <rect x="4" y="6" width="1" height="1" fill="#f5fff9"/>
+            </g>
+            <g class="fox-eye-r">
+                <rect x="7" y="6" width="2" height="2" fill="#15241d"/>
+                <rect x="8" y="6" width="1" height="1" fill="#f5fff9"/>
+            </g>
+        </g>
+    </g>
+</svg>

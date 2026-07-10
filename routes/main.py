@@ -163,3 +163,8 @@ def privacy():
     return render_template('privacy.html')
 
 
+@main_bp.route('/dex-story')
+def dex_story():
+    return render_template('dex_story.html')
+
+

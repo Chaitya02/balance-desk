@@ -47,7 +47,7 @@
                         </div>
                         <div class="mock-change">
                             <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M6 9V3M3 6l3-3 3 3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
-                            12%
+                            <span class="mock-change-num">12%</span>
                             <!-- <span class="mock-change-sub">vs last month</span> -->
                         </div>
                     </div>
@@ -149,6 +149,69 @@
 </section>
 
 <!-- ============================================================ -->
+<!-- MEET DEX                                                     -->
+<!-- ============================================================ -->
+<section class="dex-intro">
+    <div class="dex-intro-inner">
+        <div class="dex-intro-text">
+            <div class="hero-badge">Meet Dex</div>
+            <h2 class="dex-intro-title">Your finances,<br><em>one question away</em></h2>
+            <p class="dex-intro-body">
+                Dex is the AI companion built into your dashboard. It knows your
+                spending inside out — just ask in plain English and it answers,
+                or tell it what you bought and it logs the expense for you.
+            </p>
+            <ul class="dex-intro-list">
+                <li>
+                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="7" stroke="currentColor" stroke-width="1.5"/><path d="M5 8.2l2 2 4-4.4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                    Ask anything — totals, trends, category breakdowns
+                </li>
+                <li>
+                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="7" stroke="currentColor" stroke-width="1.5"/><path d="M5 8.2l2 2 4-4.4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                    Add, edit, or find expenses by chatting
+                </li>
+                <li>
+                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="7" stroke="currentColor" stroke-width="1.5"/><path d="M5 8.2l2 2 4-4.4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                    Get insights that help you spend smarter
+                </li>
+            </ul>
+            <a href="{{ url_for('main.dex_story') }}" class="dex-story-link">
+                Know Dex's story
+                <svg width="15" height="15" viewBox="0 0 16 16" fill="none"><path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </a>
+        </div>
+
+        <div class="dex-intro-visual">
+            <div class="dex-chat-mock">
+                <!-- Dex the fox, perched on the card like in the real chat -->
+                <div class="dex-mock-pet" aria-hidden="true">
+                    {% include "_dex_fox.html" %}
+                </div>
+                <div class="dex-mock-header">
+                    <span class="dex-mock-avatar">D</span>
+                    <div>
+                        <p class="dex-mock-name">Dex</p>
+                        <p class="dex-mock-sub">AI Companion</p>
+                    </div>
+                </div>
+                <div class="dex-mock-body">
+                    <div class="dex-mock-msg dex-mock-msg--user">How much did I spend on food this month?</div>
+                    <div class="dex-mock-msg dex-mock-msg--ai">
+                        <span class="dex-mock-msg-avatar">D</span>
+                        <div class="dex-mock-bubble">You've spent <strong>$885</strong> on Food so far — 23% of your total, and $120 less than last month. Nice trend!</div>
+                    </div>
+                    <div class="dex-mock-msg dex-mock-msg--user">Add $18 for lunch today</div>
+                    <div class="dex-mock-msg dex-mock-msg--ai">
+                        <span class="dex-mock-msg-avatar">D</span>
+                        <div class="dex-mock-bubble">Done — logged <strong>$18</strong> under Food for today. 🦊</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ============================================================ -->
 <!-- CTA BANNER                                                   -->
 <!-- ============================================================ -->
 <section class="cta-section">
@@ -178,7 +241,7 @@
                 Create Free Account
                 <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
             </a>
-            <p class="cta-fine">No Credit Card &bull; Free Forever</p>
+            <p class="cta-fine">No Credit Card &bull; Free Forever*</p>
         </div>
     </div>
 </section>
@@ -229,5 +292,66 @@
     document.addEventListener('keydown', function(e) {
         if (e.key === 'Escape' && modal.classList.contains('is-open')) closeModal();
     });
+</script>
+<script>
+    // Hero mock card: count the numbers up from 0 and fill the bars in sync.
+    // Targets come from the markup itself, so the static values stay the
+    // source of truth (and remain visible without JS or with reduced motion).
+    (function () {
+        if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+
+        const counters = [...document.querySelectorAll('.mock-total, .mock-donut-total, .mock-amt, .mock-change-num')]
+            .map(el => ({
+                el,
+                target: parseInt(el.textContent.replace(/[^0-9]/g, ''), 10) || 0,
+                format: el.classList.contains('mock-change-num')
+                    ? n => n + '%'
+                    : n => '$' + n.toLocaleString('en-US'),
+            }));
+
+        const bars = [...document.querySelectorAll('.mock-bar')]
+            .map(el => ({ el, width: parseFloat(el.style.width) || 0 }));
+
+        // Mirrors the static conic-gradient on .mock-donut in style.css,
+        // which stays as the no-JS / reduced-motion fallback
+        const donut = document.querySelector('.mock-donut');
+        const DONUT_STOPS = [
+            ['#1a472a', 0, 148],
+            ['#e67e22', 148, 231],
+            ['#2980b9', 231, 278],
+            ['#8e44ad', 278, 321],
+            ['#c0392b', 321, 360],
+        ];
+        function paintDonut(eased) {
+            // Clockwise reveal: segments keep their full angles and appear
+            // one after another as the sweep line passes them
+            const sweep = 360 * eased;
+            const parts = DONUT_STOPS.map(([color, from, to]) =>
+                `${color} ${Math.min(from, sweep)}deg ${Math.min(to, sweep)}deg`);
+            parts.push(`var(--border-soft) ${sweep}deg 360deg`);
+            donut.style.background = `conic-gradient(${parts.join(', ')})`;
+        }
+
+        counters.forEach(c => { c.el.textContent = c.format(0); });
+        bars.forEach(b => { b.el.style.width = '0%'; });
+        paintDonut(0);
+
+        const DURATION = 5000;
+        let start;
+        function tick(ts) {
+            if (start === undefined) start = ts;
+            const p = Math.min((ts - start) / DURATION, 1);
+            const eased = 1 - Math.pow(1 - p, 3);
+            counters.forEach(c => { c.el.textContent = c.format(Math.round(c.target * eased)); });
+            bars.forEach(b => { b.el.style.width = (b.width * eased) + '%'; });
+            paintDonut(eased);
+            if (p < 1) {
+                requestAnimationFrame(tick);
+            } else {
+                donut.style.background = '';   // hand back to the stylesheet
+            }
+        }
+        requestAnimationFrame(tick);
+    })();
 </script>
 {% endblock %}
