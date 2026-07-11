@@ -128,6 +128,7 @@
                    class="nav-mobile-link {% if ep == 'expenses.list_expenses' %}nav-mobile-link--active{% endif %}">Expenses</a>
                 <a href="{{ url_for('auth.profile') }}"
                    class="nav-mobile-link {% if ep == 'auth.profile' %}nav-mobile-link--active{% endif %}">Profile</a>
+                <a href="{{ url_for('auth.logout') }}" class="nav-mobile-link">Sign out</a>
             {% else %}
                 <a href="{{ url_for('main.about') }}"
                    class="nav-mobile-link {% if ep == 'main.about' %}nav-mobile-link--active{% endif %}">About</a>
@@ -138,6 +139,7 @@
                 {% if current_user %}
                     <a href="{{ url_for('main.dashboard') }}" class="nav-mobile-link">Dashboard</a>
                     <a href="{{ url_for('auth.profile') }}" class="nav-mobile-link">Profile</a>
+                    <a href="{{ url_for('auth.logout') }}" class="nav-mobile-link">Sign out</a>
                 {% endif %}
             {% endif %}
         </div>
