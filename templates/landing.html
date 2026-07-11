@@ -151,7 +151,7 @@
 <!-- ============================================================ -->
 <!-- MEET DEX                                                     -->
 <!-- ============================================================ -->
-<section class="dex-intro">
+<section class="dex-intro" id="dex">
     <div class="dex-intro-inner">
         <div class="dex-intro-text">
             <div class="hero-badge">Meet Dex</div>
@@ -212,25 +212,87 @@
 </section>
 
 <!-- ============================================================ -->
+<!-- PRICING                                                      -->
+<!-- ============================================================ -->
+<section class="pricing" id="pricing">
+    <div class="pricing-inner">
+        <div class="pricing-head">
+            <div class="hero-badge">Pricing</div>
+            <h2 class="pricing-title">Free to track,<br><em>Pro to chat</em></h2>
+            <p class="pricing-sub">
+                Everything you need to track your spending is free — forever.
+                Dex, the AI companion, is an optional subscription on top.
+            </p>
+        </div>
+
+        <div class="pricing-grid">
+            <div class="price-card">
+                <div class="price-card-head">
+                    <h3 class="price-plan">Tracker</h3>
+                    <p class="price-tag"><span class="price-amount">$0</span><span class="price-per">forever</span></p>
+                    <p class="price-desc">The full expense tracker. No trial, no credit card.</p>
+                </div>
+                <ul class="price-list">
+                    <li>
+                        <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="7" stroke="currentColor" stroke-width="1.5"/><path d="M5 8.2l2 2 4-4.4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                        Unlimited expense logging
+                    </li>
+                    <li>
+                        <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="7" stroke="currentColor" stroke-width="1.5"/><path d="M5 8.2l2 2 4-4.4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                        Category breakdowns &amp; monthly summaries
+                    </li>
+                    <li>
+                        <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="7" stroke="currentColor" stroke-width="1.5"/><path d="M5 8.2l2 2 4-4.4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                        Filter by any date range
+                    </li>
+                    <li>
+                        <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="7" stroke="currentColor" stroke-width="1.5"/><path d="M5 8.2l2 2 4-4.4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                        Search across all your expenses
+                    </li>
+                </ul>
+                <a href="{{ url_for('auth.register') }}" class="btn-ghost price-btn">Create Free Account</a>
+            </div>
+
+            <div class="price-card price-card--pro">
+                <span class="price-flag">Subscription</span>
+                <div class="price-card-head">
+                    <h3 class="price-plan">Dex AI</h3>
+                    <p class="price-tag"><span class="price-amount">$5</span><span class="price-per">/ month</span></p>
+                    <p class="price-desc">Adds the AI companion to your dashboard. Cancel anytime.</p>
+                </div>
+                <ul class="price-list">
+                    <li>
+                        <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="7" stroke="currentColor" stroke-width="1.5"/><path d="M5 8.2l2 2 4-4.4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                        Everything in Tracker
+                    </li>
+                    <li>
+                        <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="7" stroke="currentColor" stroke-width="1.5"/><path d="M5 8.2l2 2 4-4.4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                        Ask anything about your spending in plain English
+                    </li>
+                    <li>
+                        <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="7" stroke="currentColor" stroke-width="1.5"/><path d="M5 8.2l2 2 4-4.4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                        Add, edit, and find expenses by chatting
+                    </li>
+                    <li>
+                        <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="7" stroke="currentColor" stroke-width="1.5"/><path d="M5 8.2l2 2 4-4.4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                        Personalized insights &amp; spending trends
+                    </li>
+                </ul>
+                <a href="{{ url_for('auth.register') }}" class="btn-primary price-btn">Start with Dex</a>
+            </div>
+        </div>
+
+        <p class="pricing-note">Your data stays yours on either plan — Dex AI is an add-on, never a requirement.</p>
+    </div>
+</section>
+
+<!-- ============================================================ -->
 <!-- CTA BANNER                                                   -->
 <!-- ============================================================ -->
 <section class="cta-section">
     <div class="cta-inner">
-        <!-- Decorative leaves -->
-        <div class="cta-leaf cta-leaf--left" aria-hidden="true">
-            <svg width="120" height="200" viewBox="0 0 120 200" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M60 180 C20 140 -10 80 30 30 C50 10 80 5 100 20 C80 60 50 100 60 180Z" fill="#1a472a" opacity="0.12"/>
-                <path d="M30 190 C0 150 10 90 50 50 C30 90 20 140 30 190Z" fill="#1a472a" opacity="0.08"/>
-            </svg>
-        </div>
-        <div class="cta-leaf cta-leaf--right" aria-hidden="true">
-            <svg width="120" height="200" viewBox="0 0 120 200" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M60 180 C20 140 -10 80 30 30 C50 10 80 5 100 20 C80 60 50 100 60 180Z" fill="#1a472a" opacity="0.12"/>
-                <path d="M30 190 C0 150 10 90 50 50 C30 90 20 140 30 190Z" fill="#1a472a" opacity="0.08"/>
-            </svg>
-        </div>
         <div class="cta-icon">
-            <svg width="30" height="30" viewBox="0 0 28 28" fill="none"><path d="M14 22V10M8 16l6-6 6 6" stroke="white" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            <svg width="30" height="30" viewBox="0 0 28 28" fill="none"><path d="M14 22V10M8 16l6-6 6 6" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
         </div>
         <div class="cta-content">
             <h2 class="cta-title">Ready to take control?</h2>

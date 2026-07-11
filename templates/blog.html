@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+
+{% block title %}Blog — Balance Desk{% endblock %}
+
+{% block content %}
+<section class="dex-story-page">
+
+    <h1 class="dex-story-title">The Balance Desk Blog</h1>
+    <p class="dex-story-sub">
+        Notes on money habits, product updates, and what Dex has been learning.
+    </p>
+
+    <div class="dex-story-body">
+        <div class="dex-story-placeholder">
+            No posts yet — the first one is being written.<br>
+            Check back soon.
+        </div>
+    </div>
+
+    <div class="dex-story-back">
+        <a href="{{ url_for('main.landing') }}" class="btn-ghost">Back to Home</a>
+    </div>
+
+</section>
+{% endblock %}

@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+
+{% block title %}About — Balance Desk{% endblock %}
+
+{% block content %}
+<section class="dex-story-page">
+
+    <h1 class="dex-story-title">About Balance Desk</h1>
+    <p class="dex-story-sub">
+        A simple home for your money story — built for people who want
+        clarity, not spreadsheets.
+    </p>
+
+    <div class="dex-story-body">
+        <p>
+            Balance Desk started with a familiar frustration: at the end of every
+            month the money was gone, and nobody could quite say where. Banking
+            apps show transactions; they don't show <em>patterns</em>. We wanted
+            something that answers the real question — "where does my money
+            actually go?" — without turning budgeting into a second job.
+        </p>
+        <p>
+            So Balance Desk keeps the core loop deliberately small. Log an expense
+            in seconds, give it a category, and let the dashboard do the thinking:
+            monthly summaries, category breakdowns, and date-range views that make
+            your habits visible at a glance. No jargon, no forced budgets, no
+            guilt trips.
+        </p>
+        <p>
+            And then there's <a href="{{ url_for('main.dex_story') }}" class="dex-story-link" style="display:inline">Dex</a> —
+            the AI companion who lives in your dashboard. Ask it anything about
+            your spending in plain English, or tell it what you bought and it logs
+            the expense for you. Tracking is free forever; Dex is an optional
+            subscription for when you want a second brain on your finances.
+        </p>
+        <p>
+            Balance Desk is built and maintained by
+            <a href="https://github.com/Chaitya02" target="_blank" rel="noopener" class="footer-creator-link" style="display:inline">Chaitya Dobariya</a>.
+            It's a small product with a simple promise: your data stays yours,
+            and the tracker stays free.
+        </p>
+    </div>
+
+    <div class="dex-story-back">
+        <a href="{{ url_for('auth.register') }}" class="btn-primary">Start Tracking</a>
+    </div>
+
+</section>
+{% endblock %}
