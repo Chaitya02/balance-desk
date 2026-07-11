@@ -21,10 +21,17 @@
                 one transaction at a time.
             </p>
             <div class="hero-actions">
+                {% if current_user %}
+                <a href="{{ url_for('main.dashboard') }}" class="btn-primary">
+                    <svg width="15" height="15" viewBox="0 0 15 15" fill="none"><path d="M2 7.5h11M8.5 3l4.5 4.5L8.5 12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                    Go to Dashboard
+                </a>
+                {% else %}
                 <a href="{{ url_for('auth.register') }}" class="btn-primary">
                     <svg width="15" height="15" viewBox="0 0 15 15" fill="none"><path d="M7.5 1v13M1 7.5h13" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
                     Start Tracking
                 </a>
+                {% endif %}
                 <a href="#" class="btn-ghost" id="how-it-works-btn">
                     <svg width="15" height="15" viewBox="0 0 15 15" fill="none"><circle cx="7.5" cy="7.5" r="6.5" stroke="currentColor" stroke-width="1.4"/><path d="M6 5l4 2.5L6 10V5z" fill="currentColor" stroke="none"/></svg>
                     How It Works
@@ -250,7 +257,7 @@
                         Search across all your expenses
                     </li>
                 </ul>
-                <a href="{{ url_for('auth.register') }}" class="btn-ghost price-btn">Create Free Account</a>
+                <a href="{{ url_for('main.dashboard') if current_user else url_for('auth.register') }}" class="btn-ghost price-btn">{{ 'Go to Dashboard' if current_user else 'Create Free Account' }}</a>
             </div>
 
             <div class="price-card price-card--pro">
@@ -278,7 +285,7 @@
                         Personalized insights &amp; spending trends
                     </li>
                 </ul>
-                <a href="{{ url_for('auth.register') }}" class="btn-primary price-btn">Start with Dex</a>
+                <a href="{{ url_for('main.dashboard') if current_user else url_for('auth.register') }}" class="btn-primary price-btn">{{ 'Open Dex' if current_user else 'Start with Dex' }}</a>
             </div>
         </div>
 
@@ -299,8 +306,8 @@
             <p class="cta-body">Join thousands of people who track their expenses with Balance Desk.</p>
         </div>
         <div class="cta-action">
-            <a href="{{ url_for('auth.register') }}" class="btn-cta">
-                Create Free Account
+            <a href="{{ url_for('main.dashboard') if current_user else url_for('auth.register') }}" class="btn-cta">
+                {{ 'Go to Dashboard' if current_user else 'Create Free Account' }}
                 <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
             </a>
             <p class="cta-fine">No Credit Card &bull; Free Forever*</p>

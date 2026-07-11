@@ -91,6 +91,9 @@
 
 html { font-size: 16px; scroll-behavior: smooth; }
 
+/* Anchor targets land below the sticky navbar (64px) with breathing room */
+[id] { scroll-margin-top: calc(64px + 2.5rem); }
+
 body {
     background: var(--paper);
     color: var(--ink);
@@ -1656,16 +1659,19 @@ input[type="date"].form-input::-webkit-datetime-edit { color: var(--ink); }
     justify-content: center;
 }
 
-.legal-contact-title {
+/* Doubled selectors so these beat container rules like .dex-story-body p */
+.legal-contact-card .legal-contact-title {
     font-size: 0.95rem;
     font-weight: 700;
     color: var(--ink);
+    line-height: 1.4;
     margin: 0 0 0.2rem;
 }
 
-.legal-contact-body {
+.legal-contact-card .legal-contact-body {
     font-size: 0.83rem;
     color: var(--ink-muted);
+    line-height: 1.5;
     margin: 0;
 }
 
@@ -4155,10 +4161,13 @@ input[type="date"].form-input::-webkit-datetime-edit { color: var(--ink); }
     background: var(--paper-warm);
 }
 
-.theme-toggle .icon-sun { display: none; }
-.theme-toggle .icon-moon { display: block; }
-[data-theme="dark"] .theme-toggle .icon-sun { display: block; }
-[data-theme="dark"] .theme-toggle .icon-moon { display: none; }
+/* Icon reflects the current preference: sun = light, moon = dark, monitor = system */
+.theme-toggle .icon-sun,
+.theme-toggle .icon-moon,
+.theme-toggle .icon-system { display: none; }
+[data-theme-pref="light"] .theme-toggle .icon-sun { display: block; }
+[data-theme-pref="dark"] .theme-toggle .icon-moon { display: block; }
+[data-theme-pref="system"] .theme-toggle .icon-system { display: block; }
 
 /* Footer variant sits on the always-dark footer in both themes */
 .footer .theme-toggle {
@@ -4584,6 +4593,40 @@ input[type="date"].form-input::-webkit-datetime-edit { color: var(--ink); }
     margin: 0 auto;
     padding: 4rem 2rem 5rem;
     text-align: center;
+}
+
+/* ------------------------------------------------------------------ */
+/* About page: ambient finance icons behind the content.               */
+/* Fixed layer at z-index -1 so navbar, footer, and cards cover it;    */
+/* icons sit near the viewport edges, clear of the 680px text column.  */
+/* ------------------------------------------------------------------ */
+.about-bg {
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: -1;
+}
+
+.about-bg .abg {
+    position: absolute;
+    opacity: 0.11;
+}
+
+[data-theme="dark"] .about-bg .abg { opacity: 0.13; }
+
+.abg-1 { top: 16%; left: 7%;   width: 64px; color: var(--accent);   transform: rotate(-12deg); }
+.abg-2 { top: 20%; right: 8%;  width: 72px; color: var(--accent-3); transform: rotate(8deg); }
+.abg-3 { top: 48%; left: 4.5%; width: 56px; color: var(--accent-2); transform: rotate(6deg); }
+.abg-4 { top: 55%; right: 6%;  width: 60px; color: var(--accent);   transform: rotate(-10deg); }
+.abg-5 { top: 80%; left: 11%;  width: 68px; color: var(--accent-4); transform: rotate(-8deg); }
+.abg-6 { top: 82%; right: 9%;  width: 64px; color: var(--accent-2); transform: rotate(12deg); }
+.abg-7 { top: 8%;  left: 21%;  width: 40px; color: var(--accent-3); transform: rotate(18deg); }
+.abg-8 { top: 9%;  right: 20%; width: 44px; color: var(--accent-4); transform: rotate(-14deg); }
+
+/* Narrow screens: the text column reaches the viewport edges, so any
+   icon would sit behind the copy — hide the whole layer */
+@media (max-width: 900px) {
+    .about-bg { display: none; }
 }
 
 .dex-story-fox {

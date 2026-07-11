@@ -7,12 +7,14 @@
     <script>
         // Apply saved theme before first paint to avoid a flash of the wrong theme
         (function () {
-            let theme;
-            try { theme = localStorage.getItem('theme'); } catch (e) {}
-            if (theme !== 'light' && theme !== 'dark') {
-                theme = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
-            }
-            document.documentElement.setAttribute('data-theme', theme);
+            let pref;
+            try { pref = localStorage.getItem('theme'); } catch (e) {}
+            if (pref !== 'light' && pref !== 'dark') pref = 'system';
+            const resolved = pref === 'system'
+                ? (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light')
+                : pref;
+            document.documentElement.setAttribute('data-theme', resolved);
+            document.documentElement.setAttribute('data-theme-pref', pref);
         })();
     </script>
     <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='favicon.svg') }}">
@@ -29,21 +31,32 @@
                     <span class="brand-icon">◈</span>
                     <span class="brand-name">Balance Desk</span>
                 </a>
-                <button class="theme-toggle" type="button" aria-label="Toggle dark mode" title="Toggle theme">
+                <button class="theme-toggle" type="button" aria-label="Cycle theme" title="Cycle theme">
                     <svg class="icon-moon" width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M13.5 9.5A6 6 0 016.5 2.5a6 6 0 107 7z" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/></svg>
                     <svg class="icon-sun" width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="3.25" stroke="currentColor" stroke-width="1.4"/><path d="M8 1v1.8M8 13.2V15M15 8h-1.8M2.8 8H1M12.95 3.05l-1.27 1.27M4.32 11.68l-1.27 1.27M12.95 12.95l-1.27-1.27M4.32 4.32L3.05 3.05" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
+                    <svg class="icon-system" width="16" height="16" viewBox="0 0 16 16" fill="none"><rect x="1.5" y="2.5" width="13" height="9" rx="1.5" stroke="currentColor" stroke-width="1.4"/><path d="M5.5 14h5M8 11.5V14" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
                 </button>
             </div>
             <div class="nav-links">
-                {% if current_user %}
-                    {% set ep = request.endpoint %}
+                {% set ep = request.endpoint %}
+                {# Marketing pages keep marketing nav for everyone; only the CTA corner changes with auth state #}
+                {% set marketing_page = ep in ('main.landing', 'main.about', 'main.blog', 'main.contact', 'main.terms', 'main.privacy', 'main.dex_story') %}
+                {% if current_user and not marketing_page %}
                     <a href="{{ url_for('main.dashboard') }}"
                        class="nav-link {% if ep == 'main.dashboard' %}nav-link--active{% endif %}">Dashboard</a>
                     <a href="{{ url_for('expenses.list_expenses') }}"
                        class="nav-link {% if ep == 'expenses.list_expenses' %}nav-link--active{% endif %}">Expenses</a>
                     <!-- <a href="{{ url_for('expenses.add_expense') }}"
                        class="nav-link {% if ep == 'expenses.add_expense' or ep == 'expenses.edit_expense' %}nav-link--active{% endif %}">Add Expense</a> -->
-
+                {% else %}
+                    <a href="{{ url_for('main.about') }}"
+                       class="nav-link {% if ep == 'main.about' %}nav-link--active{% endif %}">About</a>
+                    <a href="{{ url_for('main.blog') }}"
+                       class="nav-link {% if ep == 'main.blog' %}nav-link--active{% endif %}">Blog</a>
+                    <a href="{{ url_for('main.contact') }}"
+                       class="nav-link {% if ep == 'main.contact' %}nav-link--active{% endif %}">Contact</a>
+                {% endif %}
+                {% if current_user %}
                     <!-- Three-dot profile menu -->
                     <div class="nav-dots-wrap" id="navDotsWrap">
                         <button class="nav-dots-btn" id="navDotsBtn" type="button" aria-label="More options">
@@ -69,18 +82,16 @@
                             </a>
                             <div class="nav-dots-divider"></div>
                             <a href="{{ url_for('auth.profile') }}" class="nav-dots-link">Profile settings</a>
+                            <a href="{{ url_for('auth.logout') }}" class="nav-dots-link">Sign out</a>
                         </div>
                     </div>
 
-                    <a href="{{ url_for('auth.logout') }}" class="nav-cta">Sign out</a>
+                    {% if marketing_page %}
+                        <a href="{{ url_for('main.dashboard') }}" class="nav-cta">Go to Dashboard</a>
+                    {% else %}
+                        <a href="{{ url_for('auth.logout') }}" class="nav-cta">Sign out</a>
+                    {% endif %}
                 {% else %}
-                    {% set ep = request.endpoint %}
-                    <a href="{{ url_for('main.about') }}"
-                       class="nav-link {% if ep == 'main.about' %}nav-link--active{% endif %}">About</a>
-                    <a href="{{ url_for('main.blog') }}"
-                       class="nav-link {% if ep == 'main.blog' %}nav-link--active{% endif %}">Blog</a>
-                    <a href="{{ url_for('main.contact') }}"
-                       class="nav-link {% if ep == 'main.contact' %}nav-link--active{% endif %}">Contact</a>
                     <div class="nav-auth-wrap" id="navAuthWrap">
                         <button class="nav-cta nav-auth-btn" id="navAuthBtn" type="button">
                             Get started
@@ -109,7 +120,8 @@
         <!-- Mobile menu (shown via hamburger on small screens) -->
         <div class="nav-mobile-menu" id="navMobileMenu">
             {% set ep = request.endpoint %}
-            {% if current_user %}
+            {% set marketing_page = ep in ('main.landing', 'main.about', 'main.blog', 'main.contact', 'main.terms', 'main.privacy', 'main.dex_story') %}
+            {% if current_user and not marketing_page %}
                 <a href="{{ url_for('main.dashboard') }}"
                    class="nav-mobile-link {% if ep == 'main.dashboard' %}nav-mobile-link--active{% endif %}">Dashboard</a>
                 <a href="{{ url_for('expenses.list_expenses') }}"
@@ -123,6 +135,10 @@
                    class="nav-mobile-link {% if ep == 'main.blog' %}nav-mobile-link--active{% endif %}">Blog</a>
                 <a href="{{ url_for('main.contact') }}"
                    class="nav-mobile-link {% if ep == 'main.contact' %}nav-mobile-link--active{% endif %}">Contact</a>
+                {% if current_user %}
+                    <a href="{{ url_for('main.dashboard') }}" class="nav-mobile-link">Dashboard</a>
+                    <a href="{{ url_for('auth.profile') }}" class="nav-mobile-link">Profile</a>
+                {% endif %}
             {% endif %}
         </div>
     </nav>
@@ -148,9 +164,10 @@
                 <div class="footer-brand-row">
                     <span class="brand-icon">◈</span>
                     <span class="footer-name">Balance Desk</span>
-                    <button class="theme-toggle" type="button" aria-label="Toggle dark mode" title="Toggle theme">
+                    <button class="theme-toggle" type="button" aria-label="Cycle theme" title="Cycle theme">
                         <svg class="icon-moon" width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M13.5 9.5A6 6 0 016.5 2.5a6 6 0 107 7z" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/></svg>
                         <svg class="icon-sun" width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="3.25" stroke="currentColor" stroke-width="1.4"/><path d="M8 1v1.8M8 13.2V15M15 8h-1.8M2.8 8H1M12.95 3.05l-1.27 1.27M4.32 11.68l-1.27 1.27M12.95 12.95l-1.27-1.27M4.32 4.32L3.05 3.05" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
+                        <svg class="icon-system" width="16" height="16" viewBox="0 0 16 16" fill="none"><rect x="1.5" y="2.5" width="13" height="9" rx="1.5" stroke="currentColor" stroke-width="1.4"/><path d="M5.5 14h5M8 11.5V14" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
                     </button>
                 </div>
                 <p class="footer-tagline">Track every dollar. Own your finances.</p>
@@ -638,15 +655,29 @@
             try { localStorage.setItem('theme', pref); } catch (e) {}
             const resolved = pref === 'system' ? (themeMedia.matches ? 'dark' : 'light') : pref;
             document.documentElement.setAttribute('data-theme', resolved);
+            document.documentElement.setAttribute('data-theme-pref', pref);
             window.dispatchEvent(new CustomEvent('themechange', { detail: resolved }));
         };
 
-        // Navbar/footer buttons toggle between explicit light and dark
+        // Navbar/footer buttons cycle light -> dark -> system
+        const themeCycle = { light: 'dark', dark: 'system', system: 'light' };
+
+        function updateToggleTitles() {
+            const pref = themePref();
+            const next = themeCycle[pref] || 'light';
+            document.querySelectorAll('.theme-toggle').forEach(btn => {
+                btn.title = 'Theme: ' + pref + ' — click for ' + next;
+                btn.setAttribute('aria-label', 'Theme: ' + pref + '. Switch to ' + next);
+            });
+        }
+
         document.querySelectorAll('.theme-toggle').forEach(btn => {
             btn.addEventListener('click', () => {
-                window.setThemePref(document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark');
+                window.setThemePref(themeCycle[themePref()] || 'light');
             });
         });
+        window.addEventListener('themechange', updateToggleTitles);
+        updateToggleTitles();
 
         // Follow OS theme changes while preference is 'system'
         themeMedia.addEventListener('change', () => {
