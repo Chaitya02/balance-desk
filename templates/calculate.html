@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+
+{% block title %}Calculate — Balance Desk{% endblock %}
+
+{% block content %}
+<section class="dashboard">
+    <div class="dashboard-inner">
+
+        <div class="dashboard-header">
+            <div>
+                <h1 class="dashboard-title">Calculate</h1>
+                <p class="tab-stub-sub">Split a bill without doing the arithmetic yourself.</p>
+            </div>
+        </div>
+
+        <div class="tab-stub">
+            <div class="tab-stub-icon">
+                <svg width="26" height="26" viewBox="0 0 24 24" fill="none">
+                    <rect x="4" y="2.5" width="16" height="19" rx="2.5" stroke="currentColor" stroke-width="1.6"/>
+                    <rect x="7" y="5.5" width="10" height="3.5" rx="1" stroke="currentColor" stroke-width="1.4"/>
+                    <circle cx="8.5"  cy="13" r="1.1" fill="currentColor"/>
+                    <circle cx="12"   cy="13" r="1.1" fill="currentColor"/>
+                    <circle cx="15.5" cy="13" r="1.1" fill="currentColor"/>
+                    <circle cx="8.5"  cy="17" r="1.1" fill="currentColor"/>
+                    <circle cx="12"   cy="17" r="1.1" fill="currentColor"/>
+                    <circle cx="15.5" cy="17" r="1.1" fill="currentColor"/>
+                </svg>
+            </div>
+            <h2 class="tab-stub-title">Split calculator, coming next</h2>
+            <p class="tab-stub-text">
+                Enter a total, how many people are splitting it, and an optional tip —
+                then save the result straight to your expenses as a split.
+            </p>
+            <a href="{{ url_for('expenses.add_expense') }}" class="btn-ghost">Add an expense manually</a>
+        </div>
+
+    </div>
+</section>
+{% endblock %}

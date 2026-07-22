@@ -1,0 +1,18 @@
+[
+  {
+    "slug": "why-tracking-beats-spending-less",
+    "title": "Why Tracking Beats \"Spending Less\"",
+    "date": "2026-07-20",
+    "author": "Chaitya Dobariya",
+    "excerpt": "Cutting back on vibes alone doesn't work. Here's why writing down every expense — and knowing the exact number, not a rough guess — is what actually changes how you spend.",
+    "body": [
+      {"type": "p", "html": "I'm Chaitya, a graduate student from Rutgers University. Moving abroad for school taught me a lot about responsibility, and money was the biggest lesson of all. I'd been introduced to investing back in school, so I already knew roughly how money works — and books like <em>Rich Dad Poor Dad</em> and <em>The Psychology of Money</em> gave me a lot more than I expected on top of that."},
+      {"type": "p", "html": "But here's what I kept noticing: plenty of people genuinely want to spend less and save more, yet almost none of them track anything. They try to cut back on vibes alone — and that's not the key. Tracking expenses sounds simple, but it only works if you actually have the data, and that data only exists once you type it in yourself."},
+      {"type": "p", "html": "I've been doing this since I started managing my own money, and I'll be honest — skip your check-in for a week and you're looking at a couple of hours sitting down and reconstructing your spending from memory and receipts. My advice: log your expenses on a weekly basis. Weekends work best, since that's usually when people actually have the time. To get started, Balance Desk ships with a <a href=\"/download-template\" class=\"dex-story-link\" style=\"display:inline\">downloadable expense template</a> — the same structure I used back when I was tracking everything by hand."},
+      {"type": "p", "html": "Once you're on board, the real surprises begin. You start noticing things about your own spending you'd never have looked at, let alone calculated. A rough estimate feels good enough — but an exact number is what actually changes decisions, because now you're not guessing, you know for sure."},
+      {"type": "quote", "text": "Beware of little expenses; a small leak will sink a great ship.", "cite": "Benjamin Franklin"},
+      {"type": "p", "html": "That small habit is what helps you make better decisions and build better spending habits over time. You start catching the small leaks — like the Starbucks run you grab twice a day, right after you'd already bought a bag of coffee from Walmart last month."},
+      {"type": "p", "html": "This is where Dex comes in — a fox who's genuinely good at handling this tracking work so you don't have to do it all manually. Give Dex a task, and it takes care of it. Just don't hold it against him if he slips up occasionally; he's new to the team, and he's still learning. He'll keep getting better over time, and you'll be right there with him for the journey as long as you're signed in to Balance Desk."}
+    ]
+  }
+]

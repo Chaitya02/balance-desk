@@ -8,7 +8,7 @@ from calendar import monthrange
 from datetime import datetime, date, timezone, timedelta
 from flask import Blueprint, request, jsonify, session, stream_with_context, Response, current_app
 from models import db, Expense, User
-from utils import login_required
+from utils import login_required, CURRENCIES, DEFAULT_CURRENCY
 
 
 def _max_allowed_date():
@@ -21,10 +21,17 @@ def _max_allowed_date():
 
 dex_bp = Blueprint('dex', __name__)
 
+
+def _currency_symbol(user_id: int) -> str:
+    user = db.session.get(User, user_id)
+    code = user.currency if user and user.currency in CURRENCIES else DEFAULT_CURRENCY
+    return CURRENCIES[code]['symbol']
+
 SYSTEM_PROMPT_TEMPLATE = """You are Dex, a friendly AI financial companion built into Balance Desk — a personal expense tracker.
 
 The user's name is {name}. Use their name occasionally to feel personal, but not every message.
 Today's date is {today}.
+The user's currency is {currency_name}. Always write amounts with the {currency_symbol} symbol — never any other currency sign, and never convert between currencies.
 
 You have these jobs:
 1. Answer questions about the user's spending. Only the most recent expenses are listed below — for anything else, use the tools: call find_expenses to list or locate specific expenses (by title, category, mode, amount, date, etc.), and get_spending_summary for any totals, sums, averages, counts, comparisons, biggest expense, most-used payment method, or split balances. Never add up the expense list by hand.
@@ -65,15 +72,15 @@ HOW TO EDIT OR DELETE AN EXPENSE:
 
 DELETING MORE THAN ONE EXPENSE (e.g. "delete all my data", "clear my Eating Out expenses", "remove everything from May"):
 - NEVER delete multiple expenses without explicit confirmation, and never fire several single deletes at once.
-- Use the delete_expenses tool. First call it WITHOUT confirmed (delete_all / category / date range as appropriate) — it returns how many expenses match and their total. Relay that to the user ("This will permanently delete 34 expenses totaling $4,274. Are you sure?") and wait.
+- Use the delete_expenses tool. First call it WITHOUT confirmed (delete_all / category / date range as appropriate) — it returns how many expenses match and their total. Relay that to the user ("This will permanently delete 34 expenses totaling {currency_symbol}4,274. Are you sure?") and wait.
 - Only after the user clearly says yes, call delete_expenses again with confirmed=true. If they hesitate or say no, do nothing.
 
 ANSWERING SPENDING QUESTIONS:
 - Be concise and conversational — no essays.
 - For exact figures, call get_spending_summary and report the numbers it returns; don't compute them from the list yourself (the list only shows recent expenses and may be incomplete).
-- To show or list specific expenses (e.g. "show my Starbucks purchases", "which expenses were over $100", "my UPI payments in March"), call find_expenses and report what it returns.
+- To show or list specific expenses (e.g. "show my Starbucks purchases", "which expenses were over {currency_symbol}100", "my UPI payments in March"), call find_expenses and report what it returns.
 - Pick the right arguments: a date range for "this month"/"in May"/"last year", a category filter for "on Eating Out", group_by 'mode' for "which payment method do I use most", group_by 'month' for month-to-month comparisons. For split questions, use the you_owe_others / others_owe_you figures it returns.
-- Use specific numbers when relevant. Format currency as $X.XX.
+- Use specific numbers when relevant. Format currency as {currency_symbol}X.XX.
 - Keep responses under 150 words unless the question genuinely needs more.
 - Never fabricate transactions.
 
@@ -111,7 +118,7 @@ TOOLS = [
                     },
                     "amount": {
                         "type": "number",
-                        "description": "Total expense amount in dollars"
+                        "description": "Total expense amount in the user's currency"
                     },
                     "mode": {
                         "type": "string",
@@ -257,7 +264,7 @@ TOOLS = [
         "type": "function",
         "function": {
             "name": "find_expenses",
-            "description": "Search the user's expenses with filters and get back the matching rows (each with its #ID). Use this to LIST or LOCATE specific expenses — e.g. 'show my Starbucks expenses', 'what did I buy at Walmart', 'find expenses over $100', 'my UPI payments in March' — and to look up the #ID of an expense you need to edit or delete when it isn't in the recent list shown to you. For totals, sums, counts, or comparisons, use get_spending_summary instead. For a date/month/year RANGE, use start_date and end_date.",
+            "description": "Search the user's expenses with filters and get back the matching rows (each with its #ID). Use this to LIST or LOCATE specific expenses — e.g. 'show my Starbucks expenses', 'what did I buy at Walmart', 'find expenses over 100', 'my UPI payments in March' — and to look up the #ID of an expense you need to edit or delete when it isn't in the recent list shown to you. For totals, sums, counts, or comparisons, use get_spending_summary instead. For a date/month/year RANGE, use start_date and end_date.",
             "parameters": {
                 "type": "object",
                 "properties": {
@@ -311,12 +318,12 @@ STARTERS_TTL = timedelta(days=7)
 
 STARTER_PROMPT_TEMPLATE = """Based on this user's recent expense data, write exactly {pool_size} short example messages they could send to Dex (their AI financial companion) — the kind of thing that'd appear as tappable suggestion chips the moment they open the chat.
 
-Make them feel personal and fresh by referencing things you actually see in their data below: real category names, merchants/titles, amounts, or patterns (e.g. "How much did I spend on Eating Out in May?", "Add a $14 lunch at Chipotle today", "What's my biggest expense this month?").
+Make them feel personal and fresh by referencing things you actually see in their data below: real category names, merchants/titles, amounts, or patterns (e.g. "How much did I spend on Eating Out in May?", "Add a {currency_symbol}14 lunch at Chipotle today", "What's my biggest expense this month?"). The user's currency symbol is {currency_symbol} — use it for any amounts.
 
 Requirements:
 - Exactly {pool_size} examples, each a natural first-person message a user would type — under 12 words.
 - Make them varied: mix spending questions, "log an expense" examples, and edit/delete examples. Avoid near-duplicates.
-- Refer to expenses by their title/amount/date (e.g. "Delete my $40 Walmart expense"), never by raw #ID numbers — users don't know those.
+- Refer to expenses by their title/amount/date (e.g. "Delete my {currency_symbol}40 Walmart expense"), never by raw #ID numbers — users don't know those.
 - No numbering, quotes, or extra commentary.
 - Return ONLY a raw JSON array of {pool_size} strings — nothing else.
 
@@ -326,7 +333,7 @@ USER'S EXPENSE DATA:
 DEFAULT_STARTERS = [
     "How much did I spend this month?",
     "What's my biggest spending category?",
-    "Add a $12 coffee from today",
+    "Add a {currency_symbol}12 coffee from today",
 ]
 
 DEX_FALLBACK_MESSAGE = "Dex is taking a quick break right now — please try again in a little while."
@@ -409,13 +416,14 @@ def _build_expense_context(user_id: int) -> str:
         f"(newest first). To find or act on any expense NOT in this list, call find_expenses to look "
         f"it up; for totals, sums, or comparisons, call get_spending_summary. #ID is needed to edit or delete one."
     )
+    sym = _currency_symbol(user_id)
     lines = [header, ""]
     for e in expenses:
-        split_note = f" (split: ${e.split:.2f} is my share)" if e.split is not None else ""
+        split_note = f" (split: {sym}{e.split:.2f} is my share)" if e.split is not None else ""
         paid_note = "" if e.paid_by_user else " (paid by someone else)"
         added_note = "  <-- most recently added" if e.id == newest_added_id else ""
         lines.append(
-            f"- #{e.id} | {e.date.strftime('%b %d, %Y')} | {e.title} | {e.category} | ${e.amount:.2f}{split_note}{paid_note} | mode: {e.mode or 'N/A'}{added_note}"
+            f"- #{e.id} | {e.date.strftime('%b %d, %Y')} | {e.title} | {e.category} | {sym}{e.amount:.2f}{split_note}{paid_note} | mode: {e.mode or 'N/A'}{added_note}"
         )
     return "\n".join(lines)
 
@@ -449,7 +457,7 @@ def _execute_create_expense(user_id: int, args: dict) -> dict:
         db.session.commit()
         return {
             'success': True,
-            'message': f"Expense '{args['title']}' for ${amount:.2f} on {exp_date.strftime('%b %d, %Y')} added successfully."
+            'message': f"Expense '{args['title']}' for {_currency_symbol(user_id)}{amount:.2f} on {exp_date.strftime('%b %d, %Y')} added successfully."
         }
     except Exception as e:
         db.session.rollback()
@@ -490,7 +498,7 @@ def _execute_update_expense(user_id: int, args: dict) -> dict:
         db.session.commit()
         return {
             'success': True,
-            'message': f"Updated '{expense.title}' — now ${expense.amount:.2f} on {expense.date.strftime('%b %d, %Y')}."
+            'message': f"Updated '{expense.title}' — now {_currency_symbol(user_id)}{expense.amount:.2f} on {expense.date.strftime('%b %d, %Y')}."
         }
     except Exception as e:
         db.session.rollback()
@@ -509,7 +517,7 @@ def _execute_delete_expense(user_id: int, args: dict) -> dict:
         db.session.commit()
         return {
             'success': True,
-            'message': f"Deleted '{title}' (${amount:.2f} on {exp_date.strftime('%b %d, %Y')})."
+            'message': f"Deleted '{title}' ({_currency_symbol(user_id)}{amount:.2f} on {exp_date.strftime('%b %d, %Y')})."
         }
     except Exception as e:
         db.session.rollback()
@@ -605,9 +613,11 @@ def _execute_delete_expenses(user_id: int, args: dict) -> dict:
 
         total = round(sum(e.amount for e in matches), 2)
 
+        sym = _currency_symbol(user_id)
+
         # Gate: never delete more than one expense without explicit confirmation.
         if not bool(args.get('confirmed')):
-            sample = [f"{e.title} (${e.amount:.2f}, {e.date.strftime('%b %d, %Y')})"
+            sample = [f"{e.title} ({sym}{e.amount:.2f}, {e.date.strftime('%b %d, %Y')})"
                       for e in matches[:5]]
             return {
                 'success': False,
@@ -616,14 +626,14 @@ def _execute_delete_expenses(user_id: int, args: dict) -> dict:
                 'total': total,
                 'sample': sample,
                 'message': (f"This will permanently delete {count} expense(s) totaling "
-                            f"${total:.2f}. Do NOT proceed until the user explicitly confirms."),
+                            f"{sym}{total:.2f}. Do NOT proceed until the user explicitly confirms."),
             }
 
         for e in matches:
             db.session.delete(e)
         db.session.commit()
         return {'success': True, 'deleted': count, 'total': total,
-                'message': f"Deleted {count} expense(s) totaling ${total:.2f}."}
+                'message': f"Deleted {count} expense(s) totaling {sym}{total:.2f}."}
     except Exception as e:
         db.session.rollback()
         return {'success': False, 'error': str(e)}
@@ -730,6 +740,9 @@ def chat():
     user = db.session.get(User, user_id)
     user_name = user.name if user else 'there'
 
+    currency_code = (user.currency if user and user.currency in CURRENCIES
+                     else DEFAULT_CURRENCY)
+
     now = datetime.now()
     system_content = (
         SYSTEM_PROMPT_TEMPLATE.format(
@@ -737,6 +750,8 @@ def chat():
             today=now.strftime('%B %d, %Y'),
             today_iso=now.strftime('%Y-%m-%d'),
             max_date=_max_allowed_date().strftime('%B %d, %Y'),
+            currency_name=CURRENCIES[currency_code]['label'],
+            currency_symbol=CURRENCIES[currency_code]['symbol'],
         )
         + f"\n\n---\nUSER'S EXPENSE DATA:\n{_build_expense_context(user_id)}"
     )
@@ -894,7 +909,8 @@ def _generate_starter_pool(user_id: int) -> list:
         response = client.chat.completions.create(
             model='llama-3.3-70b-versatile',
             messages=[{'role': 'user', 'content': STARTER_PROMPT_TEMPLATE.format(
-                pool_size=STARTER_POOL_SIZE, expense_data=context)}],
+                pool_size=STARTER_POOL_SIZE, expense_data=context,
+                currency_symbol=_currency_symbol(user_id))}],
             max_tokens=500,
             temperature=1.0,
         )
@@ -936,7 +952,8 @@ def starters():
             _save_starter_pool(user, pool)
 
     if not pool:
-        pool = DEFAULT_STARTERS
+        pool = [s.format(currency_symbol=_currency_symbol(user_id))
+                for s in DEFAULT_STARTERS]
 
     count = min(STARTERS_SHOWN, len(pool))
     return jsonify({'starters': random.sample(pool, count)})

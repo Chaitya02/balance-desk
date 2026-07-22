@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+
+{% block title %}Page Not Found — Balance Desk{% endblock %}
+
+{% block content %}
+<section class="error-page">
+    <div class="error-inner">
+
+        <div class="error-glyph" aria-hidden="true">
+            <span>4</span>
+            <svg class="error-diamond" viewBox="0 0 32 32">
+                <path fill="none" stroke="currentColor" stroke-width="2.4" stroke-linejoin="round"
+                      d="M16 3 L29 16 L16 29 L3 16 Z"/>
+                <path fill="currentColor" d="M16 10 L22 16 L16 22 L10 16 Z"/>
+            </svg>
+            <span>4</span>
+        </div>
+
+        <p class="hero-badge">Error 404</p>
+        <h1 class="error-title">This page went <em>off the books</em></h1>
+        <p class="error-sub">
+            The page you're looking for doesn't exist or may have moved.
+            Let's get you back on track.
+        </p>
+
+        <div class="error-actions">
+            {% if current_user %}
+            <a href="{{ url_for('main.dashboard') }}" class="btn-primary">Go to Dashboard</a>
+            <a href="{{ url_for('main.landing') }}" class="btn-ghost">Back to Home</a>
+            {% else %}
+            <a href="{{ url_for('main.landing') }}" class="btn-primary">Back to Home</a>
+            <a href="{{ url_for('auth.login') }}" class="btn-ghost">Sign In</a>
+            {% endif %}
+        </div>
+
+    </div>
+</section>
+{% endblock %}

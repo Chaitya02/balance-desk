@@ -16,9 +16,9 @@
                 <em>money goes</em>
             </h1>
             <p class="hero-subtitle">
-                Log expenses, understand your spending patterns,
-                and take control of your financial life —
-                one transaction at a time.
+                Keep track of your expenses, understand your spending
+                patterns, and build better financial habits every day
+                with confidence.
             </p>
             <div class="hero-actions">
                 {% if current_user %}
@@ -45,7 +45,6 @@
                 <div class="mock-card-header">
                     <div class="mock-period">
                         <span class="mock-period-text">{{ now.strftime("%B %Y") }}</span>
-                        <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M3 5l4 4 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
                     </div>
                     <div class="mock-header-stats">
                         <div class="mock-header-total">
@@ -64,7 +63,8 @@
                 <div class="mock-chart-area">
                     <!-- Donut chart (CSS conic-gradient) -->
                     <div class="mock-donut-wrap">
-                        <div class="mock-donut">
+                        <div class="mock-donut" id="mockDonut">
+                            <div class="mock-donut-dim" id="mockDonutDim"></div>
                             <div class="mock-donut-inner">
                                 <p class="mock-donut-total">$3,850</p>
                                 <p class="mock-donut-sub">Total</p>
@@ -73,36 +73,36 @@
                     </div>
 
                     <!-- Category bars -->
-                    <div class="mock-bars">
-                        <div class="mock-bar-row">
+                    <div class="mock-bars" id="mockBars">
+                        <div class="mock-bar-row" data-idx="0">
                             <span class="mock-dot" style="background:#1a472a"></span>
                             <span class="mock-cat">Bills</span>
                             <div class="mock-bar-track"><div class="mock-bar" style="width:65%;background:#1a472a"></div></div>
                             <span class="mock-amt">$1,580</span>
                             <!-- <span class="mock-pct">41%</span> -->
                         </div>
-                        <div class="mock-bar-row">
+                        <div class="mock-bar-row" data-idx="1">
                             <span class="mock-dot" style="background:#e67e22"></span>
                             <span class="mock-cat">Food</span>
                             <div class="mock-bar-track"><div class="mock-bar" style="width:44%;background:#e67e22"></div></div>
                             <span class="mock-amt">$885</span>
                             <!-- <span class="mock-pct">23%</span> -->
                         </div>
-                        <div class="mock-bar-row">
+                        <div class="mock-bar-row" data-idx="2">
                             <span class="mock-dot" style="background:#2980b9"></span>
                             <span class="mock-cat">Shopping</span>
                             <div class="mock-bar-track"><div class="mock-bar" style="width:25%;background:#2980b9"></div></div>
                             <span class="mock-amt">$500</span>
                             <!-- <span class="mock-pct">13%</span> -->
                         </div>
-                        <div class="mock-bar-row">
+                        <div class="mock-bar-row" data-idx="3">
                             <span class="mock-dot" style="background:#8e44ad"></span>
                             <span class="mock-cat">Transport</span>
                             <div class="mock-bar-track"><div class="mock-bar" style="width:22%;background:#8e44ad"></div></div>
                             <span class="mock-amt">$462</span>
                             <!-- <span class="mock-pct">12%</span> -->
                         </div>
-                        <div class="mock-bar-row">
+                        <div class="mock-bar-row" data-idx="4">
                             <span class="mock-dot" style="background:#c0392b"></span>
                             <span class="mock-cat">Health</span>
                             <div class="mock-bar-track"><div class="mock-bar" style="width:20%;background:#c0392b"></div></div>
@@ -230,13 +230,17 @@
                 Everything you need to track your spending is free — forever.
                 Dex, the AI companion, is an optional subscription on top.
             </p>
+            <div class="price-cur-toggle" id="priceCurToggle" role="radiogroup" aria-label="Pricing currency">
+                <button type="button" class="price-cur-btn" data-cur="USD" role="radio">$ USD</button>
+                <button type="button" class="price-cur-btn" data-cur="INR" role="radio">&#8377; INR</button>
+            </div>
         </div>
 
         <div class="pricing-grid">
             <div class="price-card">
                 <div class="price-card-head">
                     <h3 class="price-plan">Tracker</h3>
-                    <p class="price-tag"><span class="price-amount">$0</span><span class="price-per">forever</span></p>
+                    <p class="price-tag"><span class="price-amount" data-usd="$0" data-inr="&#8377;0">$0</span><span class="price-per">forever</span></p>
                     <p class="price-desc">The full expense tracker. No trial, no credit card.</p>
                 </div>
                 <ul class="price-list">
@@ -264,7 +268,7 @@
                 <span class="price-flag">Subscription</span>
                 <div class="price-card-head">
                     <h3 class="price-plan">Dex AI</h3>
-                    <p class="price-tag"><span class="price-amount">$5</span><span class="price-per">/ month</span></p>
+                    <p class="price-tag"><span class="price-amount" data-usd="$5" data-inr="&#8377;199">$5</span><span class="price-per">/ month</span></p>
                     <p class="price-desc">Adds the AI companion to your dashboard. Cancel anytime.</p>
                 </div>
                 <ul class="price-list">
@@ -320,6 +324,22 @@
     <div class="modal-box">
         <button class="modal-close" id="modal-close-btn" aria-label="Close">&times;</button>
         <div class="modal-video-wrap">
+            {# Self-hosted walkthrough, recorded from the real app by
+               scripts/record_demo.py. preload="none" so the landing page pays
+               nothing for it until someone opens the modal. #}
+            <video
+                id="how-video"
+                controls
+                playsinline
+                preload="none"
+                poster="{{ url_for('static', filename='video/how-it-works-poster.jpg') }}"
+                title="How Balance Desk works">
+                <source src="{{ url_for('static', filename='video/how-it-works.mp4') }}"  type="video/mp4">
+                <source src="{{ url_for('static', filename='video/how-it-works.webm') }}" type="video/webm">
+                Your browser can't play this video.
+            </video>
+
+            {# Previous YouTube embed — kept so hosting can be switched back in one edit.
             <iframe
                 id="yt-iframe"
                 src=""
@@ -329,6 +349,7 @@
                 allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                 allowfullscreen>
             </iframe>
+            #}
         </div>
     </div>
 </div>
@@ -338,19 +359,26 @@
 {% block scripts %}
 <script>
     const modal    = document.getElementById('video-modal');
-    const iframe   = document.getElementById('yt-iframe');
+    const video    = document.getElementById('how-video');
     const openBtn  = document.getElementById('how-it-works-btn');
     const closeBtn = document.getElementById('modal-close-btn');
 
     function openModal(e) {
         e.preventDefault();
-        iframe.src = iframe.dataset.src;
         modal.classList.add('is-open');
         modal.setAttribute('aria-hidden', 'false');
+        // preload="none" means nothing is fetched until now; kick the fetch off
+        // explicitly so a slow first byte doesn't leave play() spinning.
+        if (video.readyState === 0) video.load();
+        // Autoplay is muted-only in most browsers; a play() rejection just
+        // leaves the poster up with controls, which is a fine fallback.
+        const started = video.play();
+        if (started && started.catch) started.catch(() => {});
     }
 
     function closeModal() {
-        iframe.src = '';
+        video.pause();
+        video.currentTime = 0;
         modal.classList.remove('is-open');
         modal.setAttribute('aria-hidden', 'true');
     }
@@ -422,5 +450,76 @@
         }
         requestAnimationFrame(tick);
     })();
+</script>
+<script>
+    // Sync hover between the donut chart and its legend rows: highlight the
+    // hovered field and dim every other donut segment. Interaction, not motion,
+    // so it runs regardless of reduced-motion.
+    (function () {
+        const donut = document.getElementById('mockDonut');
+        const dim   = document.getElementById('mockDonutDim');
+        const rows  = [...document.querySelectorAll('#mockBars .mock-bar-row')];
+        if (!donut || !dim || !rows.length) return;
+
+        // Same angle stops as the conic-gradient donut in style.css
+        const STOPS = [[0, 148], [148, 231], [231, 278], [278, 321], [321, 360]];
+
+        function setActive(idx) {
+            rows.forEach(r => r.classList.toggle('is-active', Number(r.dataset.idx) === idx));
+            if (idx === null) { dim.classList.remove('is-active'); return; }
+            const parts = STOPS.map(([from, to], i) =>
+                `${i === idx ? 'transparent' : 'var(--donut-dim)'} ${from}deg ${to}deg`);
+            dim.style.background = `conic-gradient(${parts.join(', ')})`;
+            dim.classList.add('is-active');
+        }
+
+        rows.forEach(row => {
+            row.addEventListener('mouseenter', () => setActive(Number(row.dataset.idx)));
+            row.addEventListener('mouseleave', () => setActive(null));
+        });
+
+        donut.addEventListener('mousemove', (e) => {
+            const rect = donut.getBoundingClientRect();
+            const dx = e.clientX - (rect.left + rect.width / 2);
+            const dy = e.clientY - (rect.top + rect.height / 2);
+            // Ignore the hollow centre
+            if (Math.hypot(dx, dy) < rect.width * 0.28) { setActive(null); return; }
+            // Angle from 12 o'clock, clockwise — matches conic-gradient's 0deg = top
+            let angle = Math.atan2(dx, -dy) * 180 / Math.PI;
+            if (angle < 0) angle += 360;
+            const idx = STOPS.findIndex(([from, to]) => angle >= from && angle < to);
+            setActive(idx === -1 ? null : idx);
+        });
+        donut.addEventListener('mouseleave', () => setActive(null));
+    })();
+</script>
+<script>
+(function () {
+    const btns    = document.querySelectorAll('#priceCurToggle .price-cur-btn');
+    const amounts = document.querySelectorAll('.price-amount[data-usd]');
+    if (!btns.length || !amounts.length) return;
+
+    function saved() {
+        const m = document.cookie.match(/(?:^|; )pricing_currency=(USD|INR)/);
+        return m ? m[1] : null;
+    }
+    function detect() {
+        const langs = navigator.languages || [navigator.language || ''];
+        return langs.some(l => /-in$/i.test(l) || /^hi(-|$)/i.test(l)) ? 'INR' : 'USD';
+    }
+    function apply(cur) {
+        amounts.forEach(a => { a.textContent = cur === 'INR' ? a.dataset.inr : a.dataset.usd; });
+        btns.forEach(b => {
+            const active = b.dataset.cur === cur;
+            b.classList.toggle('price-cur-btn--active', active);
+            b.setAttribute('aria-checked', active);
+        });
+    }
+    btns.forEach(b => b.addEventListener('click', () => {
+        document.cookie = 'pricing_currency=' + b.dataset.cur + ';path=/;max-age=31536000;samesite=lax';
+        apply(b.dataset.cur);
+    }));
+    apply(saved() || detect());
+})();
 </script>
 {% endblock %}

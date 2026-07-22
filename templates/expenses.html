@@ -20,7 +20,7 @@
         <div class="expenses-summary">
             <div class="xstat">
                 <p class="xstat-label">Total Spent</p>
-                <p class="xstat-value">${{ "%.2f"|format(summary.total_spent) }}</p>
+                <p class="xstat-value">{{ summary.total_spent|money }}</p>
             </div>
             <div class="xstat">
                 <p class="xstat-label">Transactions</p>
@@ -32,11 +32,11 @@
             </div>
             <div class="xstat xstat--owe">
                 <p class="xstat-label">You Owe</p>
-                <p class="xstat-value">${{ "%.2f"|format(summary.you_owe) }}</p>
+                <p class="xstat-value">{{ summary.you_owe|money }}</p>
             </div>
             <div class="xstat xstat--owed">
                 <p class="xstat-label">You Are Owed</p>
-                <p class="xstat-value">${{ "%.2f"|format(summary.friend_owes) }}</p>
+                <p class="xstat-value">{{ summary.friend_owes|money }}</p>
             </div>
         </div>
 
@@ -125,9 +125,9 @@
                         <td class="col-mode">
                             <span class="mode-badge">{{ e.mode.upper() if e.mode else '—' }}</span>
                         </td>
-                        <td class="col-amount cell-num">${{ "%.2f"|format(e.amount) }}</td>
+                        <td class="col-amount cell-num">{{ e.amount|money }}</td>
                         <td class="col-split cell-num cell-muted">
-                            ${{ "%.2f"|format(e.amount if e.split is none else e.split) }}
+                            {{ e.amount if e.split is none else e.split|money }}
                         </td>
                         <td class="col-context">
                             {% if e.paid_by_user and e.split is not none and e.split < e.amount %}
@@ -156,8 +156,8 @@
                     {% for e in expenses %}{% set ns.my_spend_total = ns.my_spend_total + (e.amount if e.split is none else e.split) %}{% endfor %}
                     <tr class="sheet-footer">
                         <td colspan="4" class="footer-label">{{ expenses|length }} expense{{ 's' if expenses|length != 1 }}</td>
-                        <td class="col-amount cell-num footer-total">${{ "%.2f"|format(expenses|sum(attribute='amount')) }}</td>
-                        <td class="col-split cell-num footer-total">${{ "%.2f"|format(ns.my_spend_total) }}</td>
+                        <td class="col-amount cell-num footer-total">{{ expenses|sum(attribute='amount')|money }}</td>
+                        <td class="col-split cell-num footer-total">{{ ns.my_spend_total|money }}</td>
                         <td></td>
                         <td></td>
                     </tr>
@@ -196,7 +196,7 @@
                         <button type="button" class="split-stat-row split-stat-row--toggle" data-target="youOweList" aria-expanded="false">
                             <span class="split-stat-label">You owe</span>
                             <span class="split-stat-row-right">
-                                <span class="split-stat-value split-stat-value--owe">${{ "%.2f"|format(you_owe) }}</span>
+                                <span class="split-stat-value split-stat-value--owe">{{ you_owe|money }}</span>
                                 <svg class="split-stat-chevron" width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M3 4.5l3 3 3-3" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
                             </span>
                         </button>
@@ -205,7 +205,7 @@
                             <li class="split-stat-list-item">
                                 <span class="split-item-title">{{ item.expense.title }}</span>
                                 <span class="split-item-date">{{ item.expense.date.strftime('%b %d') }}</span>
-                                <span class="split-item-amount split-stat-value--owe">${{ "%.2f"|format(item.amount) }}</span>
+                                <span class="split-item-amount split-stat-value--owe">{{ item.amount|money }}</span>
                             </li>
                             {% else %}
                             <li class="split-stat-list-empty">Nothing here.</li>
@@ -221,7 +221,7 @@
                         <button type="button" class="split-stat-row split-stat-row--toggle" data-target="owedToYouList" aria-expanded="false">
                             <span class="split-stat-label">You are owed</span>
                             <span class="split-stat-row-right">
-                                <span class="split-stat-value split-stat-value--owed">${{ "%.2f"|format(friend_owes) }}</span>
+                                <span class="split-stat-value split-stat-value--owed">{{ friend_owes|money }}</span>
                                 <svg class="split-stat-chevron" width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M3 4.5l3 3 3-3" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
                             </span>
                         </button>
@@ -230,7 +230,7 @@
                             <li class="split-stat-list-item">
                                 <span class="split-item-title">{{ item.expense.title }}</span>
                                 <span class="split-item-date">{{ item.expense.date.strftime('%b %d') }}</span>
-                                <span class="split-item-amount split-stat-value--owed">${{ "%.2f"|format(item.amount) }}</span>
+                                <span class="split-item-amount split-stat-value--owed">{{ item.amount|money }}</span>
                             </li>
                             {% else %}
                             <li class="split-stat-list-empty">Nothing here.</li>
@@ -344,7 +344,7 @@ function buildChart(id, data, legendId, paletteMode) {
             cutout: '65%',
             plugins: { legend: { display: false }, tooltip: {
                 callbacks: {
-                    label: ctx => ` $${ctx.parsed.toFixed(2)}  (${(ctx.parsed / total * 100).toFixed(1)}%)`
+                    label: ctx => ` ${fmtMoney(ctx.parsed)}  (${(ctx.parsed / total * 100).toFixed(1)}%)`
                 }
             }},
         }
@@ -357,7 +357,7 @@ function buildChart(id, data, legendId, paletteMode) {
             <li class="legend-item">
                 <span class="legend-dot" style="background:${colors[i]}"></span>
                 <span class="legend-label">${l}</span>
-                <span class="legend-value">$${values[i].toFixed(2)}</span>
+                <span class="legend-value">${fmtMoney(values[i])}</span>
                 <span class="legend-pct">${pct}%</span>
             </li>`;
     });

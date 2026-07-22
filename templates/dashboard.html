@@ -1,10 +1,6 @@
 {% extends "base.html" %}
 
-{% block title %}Dashboard — Balance Desk{% endblock %}
-
-{% block head %}
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
-{% endblock %}
+{% block title %}Overview — Balance Desk{% endblock %}
 
 {% block content %}
 
@@ -13,173 +9,161 @@
 
         <div class="dashboard-header">
             <div>
-                <p class="dashboard-greeting">Good day,</p>
+                {# Server guesses from its own clock; the script below corrects it
+                   to the viewer's local time (the server may be running in UTC). #}
+                <p class="dashboard-greeting"><span id="ccGreeting">{{ greeting }}</span>,</p>
                 <h1 class="dashboard-name">{{ current_user.name }}</h1>
             </div>
-            <a href="{{ url_for('expenses.add_expense') }}" class="btn-primary">+ Add expense</a>
+            <a href="{{ url_for('expenses.add_expense') }}" class="btn-primary" data-tour="add-expense">+ Add expense</a>
         </div>
 
-        <div class="dashboard-stats">
-            <div class="stat-card">
-                <p class="stat-label">My Spend ({{ month_name }})</p>
-                <p class="stat-value">${{ "%.2f"|format(total_month) }}</p>
-            </div>
-            <div class="stat-card">
-                <p class="stat-label">Transactions</p>
-                <p class="stat-value">{{ transactions }}</p>
-            </div>
-            <div class="stat-card">
-                <p class="stat-label">Top category</p>
-                <p class="stat-value {% if not top_category %}stat-value--muted{% endif %}">
-                    {{ top_category or '—' }}
-                </p>
-            </div>
-            <div class="stat-card stat-card--owe">
-                <p class="stat-label">You Owe</p>
-                <p class="stat-value">${{ "%.2f"|format(you_owe) }}</p>
-            </div>
-            <div class="stat-card stat-card--owed">
-                <p class="stat-label">You Are Owed</p>
-                <p class="stat-value">${{ "%.2f"|format(friend_owes) }}</p>
-            </div>
+        <div class="dex-top-bar" id="dexTopBar" data-tour="dex-ask">
+            <span class="dex-top-bar-avatar">D</span>
+            <input type="text" class="dex-top-bar-input" id="dexTopInput"
+                   placeholder="Add an expense or ask Dex…">
+            <div class="cc-chips" id="ccChips" aria-label="Suggested questions"></div>
+            <button class="dex-top-bar-send" id="dexTopSend" aria-label="Ask Dex">
+                <svg width="15" height="15" viewBox="0 0 16 16" fill="none">
+                    <path d="M14 2L2 7l5 2 2 5 5-12z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/>
+                </svg>
+            </button>
         </div>
 
-        <!-- Yearly analytics chart -->
-        <div class="analytics-section">
+        {% if insight %}
+        <div class="cc-insight">
+            <span class="cc-insight-mark" aria-hidden="true">
+                <svg width="13" height="13" viewBox="0 0 12 12" fill="currentColor">
+                    <path d="M7 0.6l1.05 2.85L10.9 4.5 8.05 5.55 7 8.4 5.95 5.55 3.1 4.5l2.85-1.05L7 0.6z"/>
+                    <path d="M2.6 7l.6 1.6 1.6.6-1.6.6-.6 1.6-.6-1.6L.4 9.2l1.6-.6.6-1.6z"/>
+                </svg>
+            </span>
+            <p class="cc-insight-text"><strong>Dex:</strong> {{ insight.text }}</p>
+        </div>
+        {% endif %}
 
-            <div class="analytics-header"
-                 data-current-year="{{ year }}"
-                 data-min-year="{{ min_year }}">
-                <div class="analytics-year-nav">
-                    <button class="chart-year-btn" id="chartPrevYear" aria-label="Previous year">
-                        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M10 3L6 8l4 5"/></svg>
-                    </button>
-                    <h2 class="dashboard-section-title" id="chartYearTitle">Spending Trend for {{ year }}</h2>
-                    <button class="chart-year-btn" id="chartNextYear" aria-label="Next year">
-                        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3l4 5-4 5"/></svg>
-                    </button>
+        <div class="cc-grid">
+
+            <!-- Left rail: standing balances -->
+            <div class="cc-rail" data-tour="stats">
+                <div class="stat-card stat-card--owe">
+                    <p class="stat-label">You owe</p>
+                    <p class="stat-value">{{ you_owe|money }}</p>
                 </div>
-                <div class="analytics-header-stats">
-                    <div class="analytics-hstat">
-                        <span class="analytics-hstat-label">Year total</span>
-                        <span class="analytics-hstat-value" id="chartYearTotal">${{ "%.2f"|format(total_year) }}</span>
+                <div class="stat-card stat-card--owed">
+                    <p class="stat-label">Owed you</p>
+                    <p class="stat-value">{{ friend_owes|money }}</p>
+                </div>
+
+                <div class="cc-panel cc-donut-panel">
+                    <p class="cc-panel-label">Top category</p>
+                    {% if top_category %}
+                    <div class="cc-donut" id="ccDonut"
+                         data-slices='{{ cat_breakdown[:6] | tojson }}'>
+                        <div class="cc-donut-hole"></div>
                     </div>
-                    <div class="analytics-hstat-divider"></div>
-                    <div class="analytics-hstat">
-                        <span class="analytics-hstat-label">Monthly avg</span>
-                        <span class="analytics-hstat-value" id="chartAvgMonth">${{ "%.2f"|format(avg_month) }}</span>
-                    </div>
-                    {% if month_change_pct is not none %}
-                    <div class="analytics-hstat-divider" id="chartChangeDivider"></div>
-                    <div class="analytics-change {% if month_change_pct >= 0 %}analytics-change--up{% else %}analytics-change--down{% endif %}" id="chartMonthChange">
-                        <span class="analytics-change-arrow">{{ '↑' if month_change_pct >= 0 else '↓' }}</span>
-                        <span class="analytics-change-pct">{{ month_change_pct | abs }}%</span>
-                        <span class="analytics-change-label">vs {{ prev_month_name }}</span>
-                    </div>
+                    <p class="cc-donut-caption">
+                        <span class="cc-donut-cat">{{ top_category.category }}</span>
+                        <span class="cc-donut-pct">{{ top_category.pct }}%</span>
+                    </p>
+                    {% else %}
+                    <p class="cc-empty-note">Nothing logged yet.</p>
                     {% endif %}
                 </div>
             </div>
 
-            <div class="analytics-card">
-                <div class="analytics-legend-bar">
-                    <div class="analytics-legend" id="chartLegend"></div>
-                    <div class="analytics-legend-controls">
-                        <button class="analytics-ctrl-btn" id="catAll">All</button>
-                        <button class="analytics-ctrl-btn" id="catNone">None</button>
+            <!-- Centre: headline spend + category bars -->
+            <div class="cc-main">
+                <div class="cc-panel cc-spend">
+                    <p class="cc-panel-label">Spent in {{ month_name }}</p>
+                    <p class="cc-spend-value">{{ total_month|money }}</p>
+                    <div class="cc-spend-meta">
+                        {% if avg_month %}
+                        {% set below = total_month <= avg_month %}
+                        <span class="cc-delta {{ 'cc-delta--down' if below else 'cc-delta--up' }}">
+                            {{ '↓' if below else '↑' }} vs {{ avg_month|money }} avg
+                        </span>
+                        {% endif %}
+                        <span class="cc-spend-count">{{ transactions }} transaction{{ 's' if transactions != 1 }}</span>
                     </div>
                 </div>
 
-                <canvas id="yearlyChart"></canvas>
-                <p class="analytics-empty" id="chartEmpty"  style="display:none">No expenses recorded yet.</p>
-                <p class="analytics-empty" id="chartNoSel" style="display:none">Select categories above to view spending.</p>
+                <div class="cc-panel cc-cats" data-tour="categories">
+                    <div class="cc-panel-head">
+                        <p class="cc-panel-label">By category</p>
+                        <a href="{{ url_for('main.analysis') }}" class="cc-panel-link">Full analysis &rarr;</a>
+                    </div>
+                    {% if cat_breakdown %}
+                    <ul class="cc-bars">
+                        {% for row in cat_breakdown[:6] %}
+                        <li class="cc-bar-row" data-category="{{ row.category }}">
+                            <span class="cc-bar-label">{{ row.category }}</span>
+                            <span class="cc-bar-track">
+                                <span class="cc-bar-fill" style="width: {{ (row.total / cat_breakdown[0].total * 100) | round(1) }}%"></span>
+                            </span>
+                            <span class="cc-bar-value">{{ row.total|money }}</span>
+                        </li>
+                        {% endfor %}
+                    </ul>
+                    {% else %}
+                    <p class="cc-empty-note">No spending this month yet.</p>
+                    {% endif %}
+                </div>
+            </div>
 
-                <div class="analytics-footer" id="analyticsFooter" style="display:none">
-                    <span class="analytics-footer-label">Filtered total</span>
-                    <span class="analytics-footer-value" id="analyticsFilterTotal"></span>
-                    <span class="analytics-footer-note"  id="analyticsCatNote"></span>
+            <!-- Right: activity -->
+            <div class="cc-side">
+                <div class="cc-panel">
+                    <div class="cc-panel-head">
+                        <p class="cc-panel-title">Recent</p>
+                        <a href="{{ url_for('expenses.list_expenses') }}" class="cc-panel-link">All &rarr;</a>
+                    </div>
+                    {% if recent %}
+                    <ul class="cc-list">
+                        {% for e in recent %}
+                        <li class="cc-list-row">
+                            <span class="cc-list-main">
+                                <span class="cc-list-title">{{ e.title }}</span>
+                                <span class="cc-list-sub">{{ e.date.strftime('%b %d') }} · {{ e.category }}</span>
+                            </span>
+                            <span class="cc-list-amount">{{ e.amount|money }}</span>
+                        </li>
+                        {% endfor %}
+                    </ul>
+                    {% else %}
+                    <p class="cc-empty-note">No expenses logged yet.</p>
+                    {% endif %}
+                </div>
+
+                <div class="cc-panel">
+                    <div class="cc-panel-head">
+                        <p class="cc-panel-title">Likely upcoming</p>
+                    </div>
+                    {% if upcoming %}
+                    <ul class="cc-list">
+                        {% for u in upcoming %}
+                        <li class="cc-list-row">
+                            <span class="cc-list-main">
+                                <span class="cc-list-title">{{ u.title }}</span>
+                                <span class="cc-list-sub">{{ u.next_date.strftime('%b %d') }}</span>
+                            </span>
+                            <span class="cc-list-amount">{{ u.amount|money }}</span>
+                        </li>
+                        {% endfor %}
+                    </ul>
+                    <p class="cc-note">Guessed from expenses that repeat monthly.</p>
+                    {% else %}
+                    <p class="cc-empty-note">Nothing repeating yet — log a few months and Balance Desk will spot your regular bills.</p>
+                    {% endif %}
                 </div>
             </div>
 
         </div>
 
-        <!-- This month's expenses -->
-        {% if month_expenses %}
-        <div class="dashboard-section-header">
-            <h2 class="dashboard-section-title">{{ month_name }} {{ year }}</h2>
-            <a href="{{ url_for('expenses.list_expenses') }}" class="dashboard-section-link">View full breakdown &rarr;</a>
-        </div>
-
-        <div class="sheet-wrap">
-            <table class="sheet">
-                <thead>
-                    <tr>
-                        <th class="col-date">Date</th>
-                        <th class="col-title">Title</th>
-                        <th class="col-cat">Category</th>
-                        <th class="col-mode">Mode</th>
-                        <th class="col-amount">Amount</th>
-                        <th class="col-split">My Split</th>
-                        <th class="col-context">Status</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for e in month_expenses %}
-                    <tr class="sheet-row">
-                        <td class="col-date cell-date">{{ e.date.strftime('%b %d') }}</td>
-                        <td class="col-title">
-                            <span class="cell-bold">{{ e.title }}</span>
-                            {% if e.description %}
-                            <span class="cell-desc">{{ e.description }}</span>
-                            {% endif %}
-                        </td>
-                        <td class="col-cat">
-                            <span class="cat-icon-badge" data-category="{{ e.category }}">
-                                <span class="cat-icon-svg"></span>
-                                <span class="cat-icon-label">{{ e.category }}</span>
-                            </span>
-                        </td>
-                        <td class="col-mode">
-                            <span class="mode-badge">{{ e.mode.upper() if e.mode else '—' }}</span>
-                        </td>
-                        <td class="col-amount cell-num">${{ "%.2f"|format(e.amount) }}</td>
-                        <td class="col-split cell-num cell-muted">
-                            ${{ "%.2f"|format(e.amount if e.split is none else e.split) }}
-                        </td>
-                        <td class="col-context">
-                            {% if e.paid_by_user and e.split is not none and e.split < e.amount %}
-                                <span class="pill pill--owed">You are owed</span>
-                            {% elif not e.paid_by_user and e.split is not none and e.split > 0 %}
-                                <span class="pill pill--owe">You owe</span>
-                            {% else %}
-                                <span class="cell-muted">—</span>
-                            {% endif %}
-                        </td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-                <tfoot>
-                    {% set ns = namespace(amount_total=0, split_total=0) %}
-                    {% for e in month_expenses %}
-                        {% set ns.amount_total = ns.amount_total + e.amount %}
-                        {% set ns.split_total  = ns.split_total  + (e.amount if e.split is none else e.split) %}
-                    {% endfor %}
-                    <tr class="sheet-footer">
-                        <td colspan="4" class="footer-label">{{ month_expenses|length }} expense{{ 's' if month_expenses|length != 1 }}</td>
-                        <td class="col-amount cell-num footer-total">${{ "%.2f"|format(ns.amount_total) }}</td>
-                        <td class="col-split cell-num footer-total">${{ "%.2f"|format(ns.split_total) }}</td>
-                        <td></td>
-                    </tr>
-                </tfoot>
-            </table>
-        </div>
-        {% else %}
-        <div class="dashboard-empty">
-            <div class="empty-icon">◎</div>
-            <h2 class="empty-title">No expenses yet this month</h2>
-            <p class="empty-body">Start tracking by adding your first expense.</p>
-            <a href="{{ url_for('expenses.add_expense') }}" class="btn-primary">Add your first expense</a>
-        </div>
-        {% endif %}
+        <p class="cc-quote">
+            <span class="cc-quote-mark" aria-hidden="true">&ldquo;</span>
+            {{ quote_text }}
+            <span class="cc-quote-author">&mdash; {{ quote_author }}</span>
+        </p>
 
     </div>
 </section>
@@ -187,253 +171,176 @@
 {% endblock %}
 
 {% block scripts %}
-<script src="{{ url_for('static', filename='js/cat_icons.js') }}"></script>
 <script>
-document.querySelectorAll('.cat-icon-badge[data-category]').forEach(el => {
-    const cat = el.dataset.category;
-    const color = catColor(cat);
-    el.querySelector('.cat-icon-svg').innerHTML = catIcon(cat);
-    el.style.background   = color + '1a';
-    el.style.color        = color;
-    el.style.borderColor  = color + '33';
-});
+(function () {
+    // Correct the server-rendered greeting to the viewer's own clock.
+    const h = new Date().getHours();
+    const el = document.getElementById('ccGreeting');
+    if (el) el.textContent = h < 12 ? 'Good morning' : (h < 17 ? 'Good afternoon' : 'Good evening');
+})();
 </script>
 <script>
 (function () {
-    const raw = {{ chart_data | safe }};
+    // Top ask bar just forwards into the shared Dex chat modal (see base.html).
+    const topInput = document.getElementById('dexTopInput');
+    const topSend  = document.getElementById('dexTopSend');
+    const chips    = document.getElementById('ccChips');
+    if (!topInput) return;
 
-    const hasData = raw.datasets.some(ds => ds.some(v => v > 0));
-    if (!hasData) {
-        document.getElementById('yearlyChart').style.display = 'none';
-        document.getElementById('chartEmpty').style.display  = 'block';
-        return;
+    function send(text) {
+        if (!text) return;
+        topInput.value = '';
+        if (window.dexAskAndSend) window.dexAskAndSend(text);
     }
 
-    /* ── chart instance ─────────────────────────────────── */
-    const datasets = raw.categories.map((cat, i) => ({
-        label: cat,
-        data: raw.datasets[i],
-        backgroundColor: catColor(cat),
-        hoverBackgroundColor: catColor(cat),
-        borderRadius: 3,
-        borderSkipped: false,
-    }));
-
-    // Axis colors follow the active theme's CSS variables
-    function themeColors() {
-        const s = getComputedStyle(document.documentElement);
-        return {
-            border: s.getPropertyValue('--border').trim(),
-            borderSoft: s.getPropertyValue('--border-soft').trim(),
-            inkMuted: s.getPropertyValue('--ink-muted').trim(),
-            inkFaint: s.getPropertyValue('--ink-faint').trim(),
-        };
-    }
-    let tc = themeColors();
-
-    const chart = new Chart(document.getElementById('yearlyChart'), {
-        type: 'bar',
-        data: { labels: raw.labels, datasets },
-        options: {
-            responsive: true,
-            maintainAspectRatio: true,
-            aspectRatio: 2.6,
-            animation: { duration: 300 },
-            plugins: {
-                legend: { display: false },
-                tooltip: {
-                    callbacks: {
-                        label: ctx => ` ${ctx.dataset.label}: $${ctx.parsed.y.toFixed(2)}`,
-                        footer: items => {
-                            const visible = items.filter(i => chart.isDatasetVisible(i.datasetIndex));
-                            const total = visible.reduce((s, i) => s + i.parsed.y, 0);
-                            const grandTotal = raw.monthly_totals[items[0].dataIndex];
-                            const pct = grandTotal > 0 ? (total / grandTotal * 100).toFixed(1) : '0.0';
-                            return [`Total (visible): $${total.toFixed(2)}`, `${pct}% of month`];
-                        }
-                    },
-                    padding: 10,
-                    boxPadding: 4,
-                }
-            },
-            scales: {
-                x: {
-                    stacked: true,
-                    grid: { display: false },
-                    border: { color: tc.border },
-                    ticks: { font: { size: 12, family: 'Helvetica, Arial, sans-serif' }, color: tc.inkMuted }
-                },
-                y: {
-                    stacked: true,
-                    grid: { color: tc.borderSoft },
-                    border: { dash: [4, 4], color: 'transparent' },
-                    ticks: {
-                        font: { size: 11, family: 'Helvetica, Arial, sans-serif' },
-                        color: tc.inkFaint,
-                        callback: v => '$' + v.toLocaleString()
-                    }
-                }
-            }
-        }
+    topSend.addEventListener('click', () => send(topInput.value.trim()));
+    topInput.addEventListener('keydown', e => {
+        if (e.key === 'Enter') { e.preventDefault(); send(topInput.value.trim()); }
     });
 
-    window.addEventListener('themechange', () => {
-        tc = themeColors();
-        chart.options.scales.x.border.color = tc.border;
-        chart.options.scales.x.ticks.color  = tc.inkMuted;
-        chart.options.scales.y.grid.color   = tc.borderSoft;
-        chart.options.scales.y.ticks.color  = tc.inkFaint;
-        chart.update();
-    });
-
-    /* ── footer updater ─────────────────────────────────── */
-    function updateFooter() {
-        const visibleIdxs = raw.categories.map((_, i) => i).filter(i => chart.isDatasetVisible(i));
-        const total = visibleIdxs.reduce((sum, i) =>
-            sum + raw.datasets[i].reduce((a, b) => a + b, 0), 0);
-        const n = visibleIdxs.length;
-        const footer = document.getElementById('analyticsFooter');
-        const noSel  = document.getElementById('chartNoSel');
-        const canvas = document.getElementById('yearlyChart');
-
-        if (n === 0) {
-            footer.style.display = 'none';
-            noSel.style.display  = 'block';
-            canvas.style.display = 'none';
-        } else {
-            footer.style.display = 'flex';
-            noSel.style.display  = 'none';
-            canvas.style.display = 'block';
-            document.getElementById('analyticsFilterTotal').textContent =
-                '$' + total.toFixed(2);
-            const all = raw.categories.length;
-            document.getElementById('analyticsCatNote').textContent =
-                n === all ? `all ${all} categories`
-                          : `${n} of ${all} categories`;
-        }
-    }
-
-    /* ── interactive legend ─────────────────────────────── */
-    const legendEl = document.getElementById('chartLegend');
-    raw.categories.forEach((cat, i) => {
-        const chip = document.createElement('span');
-        chip.className   = 'analytics-legend-item analytics-legend-item--on';
-        chip.dataset.idx = i;
-        chip.innerHTML   = `<span class="analytics-legend-dot" style="background:${catColor(cat)}"></span>${cat}`;
-        chip.addEventListener('click', () => {
-            const on = chip.classList.toggle('analytics-legend-item--on');
-            chip.classList.toggle('analytics-legend-item--off', !on);
-            chart.setDatasetVisibility(i, on);
-            chart.update();
-            updateFooter();
-        });
-        legendEl.appendChild(chip);
-    });
-
-    /* ── All / None buttons ─────────────────────────────── */
-    document.getElementById('catAll').addEventListener('click', () => {
-        raw.categories.forEach((_, i) => {
-            chart.setDatasetVisibility(i, true);
-        });
-        legendEl.querySelectorAll('.analytics-legend-item').forEach(c => {
-            c.classList.add('analytics-legend-item--on');
-            c.classList.remove('analytics-legend-item--off');
-        });
-        chart.update();
-        updateFooter();
-    });
-
-    document.getElementById('catNone').addEventListener('click', () => {
-        raw.categories.forEach((_, i) => {
-            chart.setDatasetVisibility(i, false);
-        });
-        legendEl.querySelectorAll('.analytics-legend-item').forEach(c => {
-            c.classList.remove('analytics-legend-item--on');
-            c.classList.add('analytics-legend-item--off');
-        });
-        chart.update();
-        updateFooter();
-    });
-
-    updateFooter();
-
-    /* ── Year navigation ────────────────────────────────── */
-    const analyticsHeader = document.querySelector('.analytics-header');
-    let   viewYear  = parseInt(analyticsHeader.dataset.currentYear);
-    const minYear   = parseInt(analyticsHeader.dataset.minYear);
-    const maxYear   = parseInt(analyticsHeader.dataset.currentYear);
-    const prevBtn   = document.getElementById('chartPrevYear');
-    const nextBtn   = document.getElementById('chartNextYear');
-
-    function syncNavBtns() {
-        prevBtn.disabled = viewYear <= minYear;
-        nextBtn.disabled = viewYear >= maxYear;
-        nextBtn.style.opacity = viewYear >= maxYear ? '0.3' : '1';
-        prevBtn.style.opacity = viewYear <= minYear ? '0.3' : '1';
-    }
-    syncNavBtns();
-
-    async function loadYear(year) {
-        prevBtn.disabled = nextBtn.disabled = true;
-        try {
-            const res  = await fetch(`/api/chart-data/${year}`);
-            const data = await res.json();
-
-            // Rebuild datasets
-            const newDatasets = data.categories.map(cat => ({
-                label:               cat,
-                data:                data.datasets[data.categories.indexOf(cat)],
-                backgroundColor:     catColor(cat),
-                hoverBackgroundColor:catColor(cat),
-                borderRadius:        3,
-                borderSkipped:       false,
-            }));
-            chart.data.datasets = newDatasets;
-            chart.update();
-
-            // Rebuild legend
-            legendEl.innerHTML = '';
-            data.categories.forEach(cat => {
-                const chip = document.createElement('span');
-                chip.className   = 'analytics-legend-item analytics-legend-item--on';
-                chip.innerHTML   = `<span class="analytics-legend-dot" style="background:${catColor(cat)}"></span>${cat}`;
-                chip.addEventListener('click', () => {
-                    const on = chip.classList.toggle('analytics-legend-item--on');
-                    chip.classList.toggle('analytics-legend-item--off', !on);
-                    const idx = chart.data.datasets.findIndex(d => d.label === cat);
-                    if (idx !== -1) { chart.setDatasetVisibility(idx, on); chart.update(); }
-                    updateFooter();
-                });
-                legendEl.appendChild(chip);
+    // Suggestion chips reuse the same starter pool as the Dex modal.
+    fetch('{{ url_for("dex.starters") }}')
+        .then(r => r.ok ? r.json() : null)
+        .then(data => {
+            if (!data || !data.starters || !chips) return;
+            data.starters.slice(0, 2).forEach(text => {
+                const b = document.createElement('button');
+                b.type = 'button';
+                b.className = 'cc-chip';
+                b.textContent = text;
+                b.title = text;
+                b.addEventListener('click', () => send(text));
+                chips.appendChild(b);
             });
+        })
+        .catch(() => {});
+})();
+</script>
+<script src="{{ url_for('static', filename='js/cat_icons.js') }}"></script>
+<script>
+(function () {
+    // Category colours come from the same table that paints the badges on the
+    // expenses list, so a category looks the same everywhere.
+    document.querySelectorAll('.cc-bar-row[data-category]').forEach(row => {
+        const color = catColor(row.dataset.category);
+        row.querySelector('.cc-bar-fill').style.background = color;
+    });
 
-            // Update stats
-            document.getElementById('chartYearTitle').textContent = `Spending Trend for ${data.year}`;
-            document.getElementById('chartYearTotal').textContent = '$' + data.total_year.toFixed(2);
-            document.getElementById('chartAvgMonth').textContent  = '$' + data.avg_month.toFixed(2);
+    const donut = document.getElementById('ccDonut');
+    if (!donut) return;
+    let slices = [];
+    try { slices = JSON.parse(donut.dataset.slices || '[]'); } catch (e) {}
+    if (!slices.length) return;
 
-            // Hide month-change badge when not on the current year
-            const changeDivider = document.getElementById('chartChangeDivider');
-            const changeEl      = document.getElementById('chartMonthChange');
-            const isCurrentYear = data.year === maxYear;
-            if (changeDivider) changeDivider.style.display = isCurrentYear ? '' : 'none';
-            if (changeEl)      changeEl.style.display      = isCurrentYear ? '' : 'none';
+    // Same conic-gradient technique as the landing page hero mock.
+    let at = 0;
+    const stops = slices.map(s => {
+        const start = at;
+        at += (s.pct / 100) * 360;
+        return `${catColor(s.category)} ${start}deg ${at}deg`;
+    });
+    if (at < 359.5) stops.push(`var(--border-soft) ${at}deg 360deg`);
+    donut.style.background = `conic-gradient(${stops.join(', ')})`;
+})();
+</script>
+<script>
+(function () {
+    // One-time dashboard tour — walks through the top ask bar, add-expense
+    // button, the balances rail, the category breakdown, and the Expenses nav
+    // link. Auto-plays once per user, replayable via the help button that sits
+    // where the Dex fab would otherwise be on this page.
+    const helpFab = document.getElementById('dashboardHelpFab');
+    const userId  = {{ current_user.id | tojson }};
+    const seenKey = 'db_tour_seen_' + userId;
 
-            // Empty state
-            const hasData = data.datasets.some(ds => ds.some(v => v > 0));
-            document.getElementById('yearlyChart').style.display = hasData ? 'block' : 'none';
-            document.getElementById('chartEmpty').style.display  = hasData ? 'none'  : 'block';
+    const steps = [
+        { selector: '[data-tour="dex-ask"]',
+          title: 'Ask Dex anything',
+          body: 'Type a question about your spending right here — no need to open a separate chat window.' },
+        { selector: '[data-tour="add-expense"]',
+          title: 'Log an expense',
+          body: 'Add a new expense in a few seconds from anywhere on the dashboard.' },
+        { selector: '[data-tour="stats"]',
+          title: 'What you owe, at a glance',
+          body: 'Outstanding balances either way, plus the category taking the biggest bite this month.' },
+        { selector: '[data-tour="categories"]',
+          title: 'Where the money went',
+          body: 'This month broken down by category. Head to Analysis for the full year and filters.' },
+        { selector: '#navExpensesLink',
+          title: 'Full expense list',
+          body: 'Jump here any time to browse, filter, or edit every expense you\'ve logged.' },
+    ];
 
-            updateFooter();
-        } catch (e) { console.error(e); }
+    let idx = 0;
+    let tooltipEl = null;
+    let spotlightEl = null;
 
-        viewYear = year;
-        syncNavBtns();
+    function clearSpotlight() {
+        if (spotlightEl) spotlightEl.classList.remove('dtour-spotlight');
+        spotlightEl = null;
     }
 
-    prevBtn.addEventListener('click', () => { if (viewYear > minYear) loadYear(viewYear - 1); });
-    nextBtn.addEventListener('click', () => { if (viewYear < maxYear) loadYear(viewYear + 1); });
+    function positionTooltip(target) {
+        const r = target.getBoundingClientRect();
+        const tw = tooltipEl.offsetWidth;
+        const th = tooltipEl.offsetHeight;
+        let top  = r.bottom + 12;
+        let left = Math.min(Math.max(r.left, 12), window.innerWidth - tw - 12);
+        if (top + th > window.innerHeight - 12) top = Math.max(r.top - th - 12, 12);
+        tooltipEl.style.top  = top + 'px';
+        tooltipEl.style.left = left + 'px';
+    }
 
+    function renderStep() {
+        clearSpotlight();
+        const step = steps[idx];
+        const target = document.querySelector(step.selector);
+        if (!target) { idx++; return idx < steps.length ? renderStep() : endTour(); }
+
+        target.scrollIntoView({ block: 'center', behavior: 'smooth' });
+        spotlightEl = target;
+        spotlightEl.classList.add('dtour-spotlight');
+
+        tooltipEl.innerHTML = `
+            <p class="dtour-title">${step.title}</p>
+            <p class="dtour-body">${step.body}</p>
+            <div class="dtour-footer">
+                <div class="dtour-dots">
+                    ${steps.map((_, i) => `<span class="dtour-dot ${i === idx ? 'dtour-dot--active' : ''}"></span>`).join('')}
+                </div>
+                <div class="dtour-actions">
+                    <button type="button" class="dtour-skip" id="dtourSkip">Skip</button>
+                    <button type="button" class="dtour-next" id="dtourNext">${idx === steps.length - 1 ? 'Done' : 'Next'}</button>
+                </div>
+            </div>`;
+
+        setTimeout(() => positionTooltip(target), 260);
+        document.getElementById('dtourSkip').addEventListener('click', endTour);
+        document.getElementById('dtourNext').addEventListener('click', () => {
+            idx++;
+            if (idx < steps.length) renderStep(); else endTour();
+        });
+    }
+
+    function startTour() {
+        idx = 0;
+        tooltipEl = document.createElement('div');
+        tooltipEl.className = 'dtour-tooltip';
+        document.body.appendChild(tooltipEl);
+        renderStep();
+    }
+
+    function endTour() {
+        clearSpotlight();
+        if (tooltipEl) { tooltipEl.remove(); tooltipEl = null; }
+        try { localStorage.setItem(seenKey, '1'); } catch {}
+    }
+
+    if (helpFab) helpFab.addEventListener('click', startTour);
+
+    let alreadySeen = false;
+    try { alreadySeen = localStorage.getItem(seenKey) === '1'; } catch {}
+    if (!alreadySeen) setTimeout(startTour, 600);
 })();
 </script>
 {% endblock %}

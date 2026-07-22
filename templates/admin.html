@@ -1,0 +1,109 @@
+{% extends "admin_base.html" %}
+
+{% block title %}Admin — Balance Desk{% endblock %}
+
+{% block content %}
+<section class="dashboard admin-panel">
+  <div class="dashboard-inner">
+
+    <div class="dashboard-header">
+        <div>
+            <p class="admin-eyebrow">Admin</p>
+            <h1 class="dashboard-title">Platform overview</h1>
+        </div>
+        <a href="{{ url_for('admin.admin_exit') }}" class="btn-ghost">Exit admin</a>
+    </div>
+
+    <div class="dashboard-stats admin-stats">
+        <div class="stat-card">
+            <p class="stat-label">Total users</p>
+            <p class="stat-value">{{ total_users }}</p>
+        </div>
+        <div class="stat-card">
+            <p class="stat-label">Verified</p>
+            <p class="stat-value">{{ verified_users }}</p>
+        </div>
+        <div class="stat-card">
+            <p class="stat-label">Subscribers</p>
+            <p class="stat-value">{{ subscribers }}</p>
+        </div>
+        <div class="stat-card">
+            <p class="stat-label">Google sign-ins</p>
+            <p class="stat-value">{{ google_users }}</p>
+        </div>
+        <div class="stat-card">
+            <p class="stat-label">Expenses logged</p>
+            <p class="stat-value">{{ total_expenses }}</p>
+        </div>
+        <div class="stat-card">
+            <p class="stat-label">New this month</p>
+            <p class="stat-value">{{ new_users_month }}</p>
+        </div>
+    </div>
+
+    <div class="dashboard-section-header">
+        <h2 class="dashboard-section-title">Users</h2>
+        <span class="dashboard-section-link">{{ user_rows|length }} total</span>
+    </div>
+
+    <div class="admin-table-wrap">
+        <table class="admin-table">
+            <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>Email</th>
+                    <th>Role</th>
+                    <th>Method</th>
+                    <th class="admin-col-center">Verified</th>
+                    <th class="admin-col-center">Currency</th>
+                    <th class="admin-col-right">Expenses</th>
+                    <th>Joined</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for u in user_rows %}
+                <tr>
+                    <td class="admin-cell-strong">{{ u.name }}</td>
+                    <td class="admin-cell-muted">{{ u.email }}</td>
+                    <td>
+                        {% if u.role == 'admin' %}
+                        <span class="admin-badge admin-badge--admin">Admin</span>
+                        {% else %}
+                        <form method="POST" action="{{ url_for('admin.admin_set_role', user_id=u.id) }}"
+                              class="admin-role-form">
+                            <select name="role" class="admin-role-select" onchange="this.form.submit()"
+                                    aria-label="Role for {{ u.email }}">
+                                <option value="user" {% if u.role == 'user' %}selected{% endif %}>User</option>
+                                <option value="subscriber" {% if u.role == 'subscriber' %}selected{% endif %}>Subscriber</option>
+                            </select>
+                        </form>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <span class="admin-badge admin-badge--{{ 'google' if u.method == 'Google' else 'email' }}">
+                            {{ u.method }}
+                        </span>
+                    </td>
+                    <td class="admin-col-center">
+                        {% if u.verified %}
+                        <span class="admin-check" title="Verified">&#10003;</span>
+                        {% else %}
+                        <span class="admin-dash" title="Not verified">&mdash;</span>
+                        {% endif %}
+                    </td>
+                    <td class="admin-col-center admin-cell-muted">{{ u.currency }}</td>
+                    <td class="admin-col-right">{{ u.expenses }}</td>
+                    <td class="admin-cell-muted">
+                        {{ u.joined.strftime('%b %d, %Y') if u.joined else '—' }}
+                    </td>
+                </tr>
+                {% else %}
+                <tr><td colspan="8" class="admin-empty">No users yet.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+  </div>
+</section>
+{% endblock %}

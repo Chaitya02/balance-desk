@@ -3,15 +3,17 @@ import resend
 from dotenv import load_dotenv
 load_dotenv()
 
-from flask import Flask, session
+from flask import Flask, session, g, render_template
 from werkzeug.middleware.proxy_fix import ProxyFix
 from authlib.integrations.flask_client import OAuth
 from models import db, User
+from utils import CURRENCIES, DEFAULT_CURRENCY, format_money
 from routes.auth import auth_bp
 from routes.main import main_bp
 from routes.expenses import expenses_bp
 from routes.import_export import import_export_bp
 from routes.dex import dex_bp
+from routes.admin import admin_bp, sync_admin_role, redirect_admin_from_user_app
 
 oauth = OAuth()
 
@@ -65,16 +67,30 @@ def create_app():
     app.register_blueprint(expenses_bp)
     app.register_blueprint(import_export_bp)
     app.register_blueprint(dex_bp)
+    app.register_blueprint(admin_bp)
+
+    app.before_request(redirect_admin_from_user_app)
 
     @app.context_processor
     def inject_user():
         user_id = session.get('user_id')
-        if user_id:
-            user = db.session.get(User, user_id)
-            return {'current_user': user}
-        return {'current_user': None}
+        user = db.session.get(User, user_id) if user_id else None
+        code = (user.currency if user and user.currency in CURRENCIES
+                else DEFAULT_CURRENCY)
+        g.user_currency = code
+        return {
+            'current_user': user,
+            'currency_code': code,
+            'currency_symbol': CURRENCIES[code]['symbol'],
+            'currencies': CURRENCIES,
+        }
 
     app.jinja_env.filters['enumerate'] = enumerate
+    app.jinja_env.filters['money'] = format_money
+
+    @app.errorhandler(404)
+    def page_not_found(e):
+        return render_template('404.html'), 404
 
     with app.app_context():
         db.create_all()
@@ -84,6 +100,9 @@ def create_app():
                 "ALTER TABLE expenses ADD COLUMN paid_by_user BOOLEAN NOT NULL DEFAULT 1",
                 "ALTER TABLE users ADD COLUMN dex_starters TEXT",
                 "ALTER TABLE users ADD COLUMN dex_starters_at DATETIME",
+                "ALTER TABLE users ADD COLUMN currency VARCHAR(3) NOT NULL DEFAULT 'USD'",
+                "ALTER TABLE users ADD COLUMN role VARCHAR(20) NOT NULL DEFAULT 'user'",
+                "ALTER TABLE users ADD COLUMN subscribed_at DATETIME",
             ]
             for stmt in migrations:
                 try:
@@ -91,6 +110,8 @@ def create_app():
                     conn.commit()
                 except Exception:
                     conn.rollback()
+
+        sync_admin_role()
 
     return app
 

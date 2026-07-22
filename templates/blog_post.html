@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+
+{% block title %}{{ post.title }} — Balance Desk Blog{% endblock %}
+
+{% block content %}
+<section class="dex-story-page">
+
+    <p class="blog-post-back-link">
+        <a href="{{ url_for('main.blog') }}" class="dex-story-link">
+            <svg width="15" height="15" viewBox="0 0 16 16" fill="none"><path d="M13 8H3M7 4L3 8l4 4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            All posts
+        </a>
+    </p>
+
+    <h1 class="dex-story-title">{{ post.title }}</h1>
+    <p class="dex-story-sub blog-post-meta">Published {{ post.date }} &middot; {{ post.author }}</p>
+
+    <article class="dex-story-body">
+        {% for block in post.body %}
+            {% if block.type == 'quote' %}
+            <blockquote class="dex-story-quote">
+                "{{ block.text }}"
+                <cite>— {{ block.cite }}</cite>
+            </blockquote>
+            {% else %}
+            <p>{{ block.html | safe }}</p>
+            {% endif %}
+        {% endfor %}
+    </article>
+
+    <div class="dex-story-back">
+        <a href="{{ url_for('auth.register') }}" class="btn-primary">Start Tracking</a>
+        <a href="{{ url_for('main.blog') }}" class="btn-ghost">All Posts</a>
+    </div>
+
+</section>
+{% endblock %}

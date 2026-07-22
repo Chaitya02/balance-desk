@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+
+{% block title %}Messages — Balance Desk{% endblock %}
+
+{% block content %}
+<section class="dashboard">
+    <div class="dashboard-inner">
+
+        <div class="dashboard-header">
+            <div>
+                <h1 class="dashboard-title">Messages</h1>
+                <p class="tab-stub-sub">Your conversation with Dex, in full.</p>
+            </div>
+        </div>
+
+        <div class="tab-stub">
+            <div class="tab-stub-icon">
+                <svg width="26" height="26" viewBox="0 0 24 24" fill="none">
+                    <path d="M20.5 12c0 4.14-3.8 7.5-8.5 7.5-.98 0-1.92-.15-2.79-.42L4.5 20.5l1.2-3.4C4.24 15.77 3.5 13.97 3.5 12c0-4.14 3.8-7.5 8.5-7.5s8.5 3.36 8.5 7.5z"
+                          stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/>
+                </svg>
+            </div>
+            <h2 class="tab-stub-title">Dex is moving in here</h2>
+            <p class="tab-stub-text">
+                This tab will hold your full Dex conversation with history, instead of the
+                floating chat bubble. For now, Dex is still available from the corner of any page.
+            </p>
+        </div>
+
+    </div>
+</section>
+{% endblock %}

@@ -263,7 +263,7 @@ def _build_template() -> Workbook:
         ('  Mode         — Payment method or payer:', False),
         ('                 Use your card/account name if YOU paid (e.g. AMEX, Chase Visa)', False),
         ('                 Use FRIEND / "Name Paid" if someone ELSE paid (e.g. FRIEND, Aayush Paid)', False),
-        ('  Amount       — Full transaction amount  (number, no "$")', False),
+        ('  Amount       — Full transaction amount  (number only, no currency symbol)', False),
         ('  Split        — Your share of the expense:', False),
         ('                 • Same as Amount → you paid it all for yourself', False),
         ('                 • Less than Amount and YOU paid → friend owes you the difference', False),

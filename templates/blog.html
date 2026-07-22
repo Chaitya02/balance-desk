@@ -3,19 +3,32 @@
 {% block title %}Blog — Balance Desk{% endblock %}
 
 {% block content %}
-<section class="dex-story-page">
+<section class="dex-story-page blog-list-page">
 
-    <h1 class="dex-story-title">The Balance Desk Blog</h1>
+    <h1 class="dex-story-title">The Balance Desk Blogs</h1>
     <p class="dex-story-sub">
         Notes on money habits, product updates, and what Dex has been learning.
     </p>
 
+    {% if posts %}
+    <div class="blog-grid">
+        {% for post in posts %}
+        <a href="{{ url_for('main.blog_post', slug=post.slug) }}" class="blog-card">
+            <p class="blog-card-meta">{{ post.date }} &middot; {{ post.author }}</p>
+            <h2 class="blog-card-title">{{ post.title }}</h2>
+            <p class="blog-card-excerpt">{{ post.excerpt }}</p>
+            <span class="dex-story-link">Read post</span>
+        </a>
+        {% endfor %}
+    </div>
+    {% else %}
     <div class="dex-story-body">
         <div class="dex-story-placeholder">
             No posts yet — the first one is being written.<br>
             Check back soon.
         </div>
     </div>
+    {% endif %}
 
     <div class="dex-story-back">
         <a href="{{ url_for('main.landing') }}" class="btn-ghost">Back to Home</a>

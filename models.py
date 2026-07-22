@@ -3,6 +3,20 @@ from flask_sqlalchemy import SQLAlchemy
 
 db = SQLAlchemy()
 
+# Account roles. Everyone starts as ROLE_USER; ROLE_SUBSCRIBER is granted once a
+# monthly plan is paid for, ROLE_ADMIN belongs to the single owner account.
+ROLE_ADMIN      = 'admin'
+ROLE_SUBSCRIBER = 'subscriber'
+ROLE_USER       = 'user'
+
+ROLES = (ROLE_ADMIN, ROLE_SUBSCRIBER, ROLE_USER)
+
+ROLE_LABELS = {
+    ROLE_ADMIN:      'Admin',
+    ROLE_SUBSCRIBER: 'Subscriber',
+    ROLE_USER:       'User',
+}
+
 
 class User(db.Model):
     __tablename__ = 'users'
@@ -16,6 +30,11 @@ class User(db.Model):
     is_verified        = db.Column(db.Boolean, default=False, nullable=False, server_default='1')
     verification_token = db.Column(db.String(64), nullable=True)
     created_at         = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+    currency           = db.Column(db.String(3), nullable=False, default='USD', server_default='USD')
+    role               = db.Column(db.String(20), nullable=False,
+                                   default=ROLE_USER, server_default=ROLE_USER)
+    # When the current monthly plan was activated (null for non-subscribers).
+    subscribed_at      = db.Column(db.DateTime, nullable=True)
 
     # Cached pool of Dex starter prompts (JSON list) + when it was generated,
     # so we don't hit the LLM every time the chat opens.
@@ -24,6 +43,19 @@ class User(db.Model):
 
     expenses = db.relationship('Expense', backref='user', lazy='dynamic',
                                order_by='Expense.date.desc()')
+
+    @property
+    def is_admin(self):
+        return self.role == ROLE_ADMIN
+
+    @property
+    def is_subscriber(self):
+        """Admins get every paid capability without a plan of their own."""
+        return self.role in (ROLE_SUBSCRIBER, ROLE_ADMIN)
+
+    @property
+    def role_label(self):
+        return ROLE_LABELS.get(self.role, ROLE_LABELS[ROLE_USER])
 
     def __repr__(self):
         return f'<User {self.email}>'

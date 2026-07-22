@@ -42,17 +42,29 @@
                 {# Marketing pages keep marketing nav for everyone; only the CTA corner changes with auth state #}
                 {% set marketing_page = ep in ('main.landing', 'main.about', 'main.blog', 'main.contact', 'main.terms', 'main.privacy', 'main.dex_story') %}
                 {% if current_user and not marketing_page %}
+                    {# App tabs. Sub-pages (add/edit expense, import/export) keep their parent tab lit. #}
+                    {% set expenses_eps = ('expenses.list_expenses', 'expenses.add_expense', 'expenses.edit_expense') %}
                     <a href="{{ url_for('main.dashboard') }}"
-                       class="nav-link {% if ep == 'main.dashboard' %}nav-link--active{% endif %}">Dashboard</a>
-                    <a href="{{ url_for('expenses.list_expenses') }}"
-                       class="nav-link {% if ep == 'expenses.list_expenses' %}nav-link--active{% endif %}">Expenses</a>
-                    <!-- <a href="{{ url_for('expenses.add_expense') }}"
-                       class="nav-link {% if ep == 'expenses.add_expense' or ep == 'expenses.edit_expense' %}nav-link--active{% endif %}">Add Expense</a> -->
+                       class="nav-link {% if ep == 'main.dashboard' %}nav-link--active{% endif %}">Overview</a>
+                    <a href="{{ url_for('expenses.list_expenses') }}" id="navExpensesLink"
+                       class="nav-link {% if ep in expenses_eps %}nav-link--active{% endif %}">Expenses</a>
+                    <a href="{{ url_for('main.messages') }}"
+                       class="nav-link {% if ep == 'main.messages' %}nav-link--active{% endif %}">Messages</a>
+                    <a href="{{ url_for('main.analysis') }}"
+                       class="nav-link {% if ep == 'main.analysis' %}nav-link--active{% endif %}">Analysis<span
+                          class="nav-link-ai" role="img" aria-label="AI powered" title="AI powered">
+                        <svg width="11" height="11" viewBox="0 0 12 12" fill="currentColor" aria-hidden="true">
+                            <path d="M7 0.6l1.05 2.85L10.9 4.5 8.05 5.55 7 8.4 5.95 5.55 3.1 4.5l2.85-1.05L7 0.6z"/>
+                            <path d="M2.6 7l.6 1.6 1.6.6-1.6.6-.6 1.6-.6-1.6L.4 9.2l1.6-.6.6-1.6z"/>
+                        </svg>
+                       </span></a>
+                    <a href="{{ url_for('main.calculate') }}"
+                       class="nav-link {% if ep == 'main.calculate' %}nav-link--active{% endif %}">Calculate</a>
                 {% else %}
                     <a href="{{ url_for('main.about') }}"
                        class="nav-link {% if ep == 'main.about' %}nav-link--active{% endif %}">About</a>
                     <a href="{{ url_for('main.blog') }}"
-                       class="nav-link {% if ep == 'main.blog' %}nav-link--active{% endif %}">Blog</a>
+                       class="nav-link {% if ep == 'main.blog' %}nav-link--active{% endif %}">Blogs</a>
                     <a href="{{ url_for('main.contact') }}"
                        class="nav-link {% if ep == 'main.contact' %}nav-link--active{% endif %}">Contact</a>
                 {% endif %}
@@ -81,8 +93,8 @@
                                 </div>
                             </a>
                             <div class="nav-dots-divider"></div>
-                            <a href="{{ url_for('auth.profile') }}" class="nav-dots-link">Profile settings</a>
-                            <a href="{{ url_for('auth.logout') }}" class="nav-dots-link">Sign out</a>
+                            <a href="{{ url_for('auth.profile') }}" class="nav-dots-link">Profile</a>
+                            <a href="{{ url_for('auth.profile') }}#settings" class="nav-dots-link">Settings</a>
                         </div>
                     </div>
 
@@ -122,18 +134,31 @@
             {% set ep = request.endpoint %}
             {% set marketing_page = ep in ('main.landing', 'main.about', 'main.blog', 'main.contact', 'main.terms', 'main.privacy', 'main.dex_story') %}
             {% if current_user and not marketing_page %}
+                {% set expenses_eps = ('expenses.list_expenses', 'expenses.add_expense', 'expenses.edit_expense') %}
                 <a href="{{ url_for('main.dashboard') }}"
-                   class="nav-mobile-link {% if ep == 'main.dashboard' %}nav-mobile-link--active{% endif %}">Dashboard</a>
+                   class="nav-mobile-link {% if ep == 'main.dashboard' %}nav-mobile-link--active{% endif %}">Overview</a>
                 <a href="{{ url_for('expenses.list_expenses') }}"
-                   class="nav-mobile-link {% if ep == 'expenses.list_expenses' %}nav-mobile-link--active{% endif %}">Expenses</a>
+                   class="nav-mobile-link {% if ep in expenses_eps %}nav-mobile-link--active{% endif %}">Expenses</a>
+                <a href="{{ url_for('main.messages') }}"
+                   class="nav-mobile-link {% if ep == 'main.messages' %}nav-mobile-link--active{% endif %}">Messages</a>
+                <a href="{{ url_for('main.analysis') }}"
+                   class="nav-mobile-link {% if ep == 'main.analysis' %}nav-mobile-link--active{% endif %}">Analysis<span
+                      class="nav-link-ai nav-link-ai--inline" role="img" aria-label="AI powered">
+                    <svg width="11" height="11" viewBox="0 0 12 12" fill="currentColor" aria-hidden="true">
+                        <path d="M7 0.6l1.05 2.85L10.9 4.5 8.05 5.55 7 8.4 5.95 5.55 3.1 4.5l2.85-1.05L7 0.6z"/>
+                        <path d="M2.6 7l.6 1.6 1.6.6-1.6.6-.6 1.6-.6-1.6L.4 9.2l1.6-.6.6-1.6z"/>
+                    </svg>
+                   </span></a>
+                <a href="{{ url_for('main.calculate') }}"
+                   class="nav-mobile-link {% if ep == 'main.calculate' %}nav-mobile-link--active{% endif %}">Calculate</a>
                 <a href="{{ url_for('auth.profile') }}"
-                   class="nav-mobile-link {% if ep == 'auth.profile' %}nav-mobile-link--active{% endif %}">Profile</a>
+                   class="nav-mobile-link {% if ep == 'auth.profile' %}nav-mobile-link--active{% endif %}">Profile &amp; settings</a>
                 <a href="{{ url_for('auth.logout') }}" class="nav-mobile-link">Sign out</a>
             {% else %}
                 <a href="{{ url_for('main.about') }}"
                    class="nav-mobile-link {% if ep == 'main.about' %}nav-mobile-link--active{% endif %}">About</a>
                 <a href="{{ url_for('main.blog') }}"
-                   class="nav-mobile-link {% if ep == 'main.blog' %}nav-mobile-link--active{% endif %}">Blog</a>
+                   class="nav-mobile-link {% if ep == 'main.blog' %}nav-mobile-link--active{% endif %}">Blogs</a>
                 <a href="{{ url_for('main.contact') }}"
                    class="nav-mobile-link {% if ep == 'main.contact' %}nav-mobile-link--active{% endif %}">Contact</a>
                 {% if current_user %}
@@ -204,7 +229,7 @@
                     </a>
                     <a href="{{ url_for('main.blog') }}">
                         <svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M2 10.5V2.5c0-.55.45-1 1-1h7c.55 0 1 .45 1 1v8c0 .55-.45 1-1 1H3c-.55 0-1-.45-1-1z" stroke="currentColor" stroke-width="1.3"/><path d="M4.5 4.5h4M4.5 6.5h4M4.5 8.5h2.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
-                        Blog
+                        Blogs
                     </a>
                     <a href="{{ url_for('main.contact') }}">
                         <svg width="13" height="13" viewBox="0 0 13 13" fill="none"><rect x="1.5" y="3" width="10" height="7.5" rx="1.3" stroke="currentColor" stroke-width="1.3"/><path d="M1.5 4.5l5 3.2 5-3.2" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
@@ -243,11 +268,22 @@
     </footer>
 
     {% if current_user %}
+    {% if request.endpoint == 'main.dashboard' %}
+    <!-- Dashboard tutorial trigger — Dex itself lives in the top ask bar here -->
+    <button class="dashboard-help-fab" id="dashboardHelpFab" aria-label="Replay dashboard tour">
+        <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+            <circle cx="10" cy="10" r="8.5" stroke="currentColor" stroke-width="1.6"/>
+            <path d="M7.6 7.7a2.4 2.4 0 114.15 1.63c-.6.58-1.25.98-1.25 1.87" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+            <circle cx="10" cy="14" r="0.9" fill="currentColor"/>
+        </svg>
+    </button>
+    {% else %}
     <!-- Dex AI Companion -->
     <button class="dex-fab" id="dexFab" aria-label="Open Dex AI companion">
         <span class="dex-fab-avatar">D</span>
         <span class="dex-fab-label">Dex</span>
     </button>
+    {% endif %}
 
     <div class="dex-modal" id="dexModal" role="dialog" aria-modal="true" aria-label="Dex AI companion">
         <!-- Dex the fox — pixel-art mascot standing on the top-right edge -->
@@ -380,6 +416,15 @@
     </div>
     {% endif %}
 
+    <script>
+    window.CURRENCY = {
+        code:   {{ currency_code|tojson }},
+        symbol: {{ currency_symbol|tojson }},
+        locale: {{ ('en-IN' if currency_code == 'INR' else 'en-US')|tojson }}
+    };
+    window.fmtMoney = v => CURRENCY.symbol + Number(v).toLocaleString(CURRENCY.locale,
+        { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    </script>
     <script src="{{ url_for('static', filename='js/main.js') }}"></script>
     <script>
     (function () {
@@ -391,7 +436,8 @@
         const dexMsgs   = document.getElementById('dexMessages');
         const dexStarters = document.getElementById('dexStarters');
         const dexPet    = document.getElementById('dexPet');
-        if (!dexFab) return;
+        const dexTopBar = document.getElementById('dexTopBar');
+        if (!dexModal) return;
 
         // Pet reactions — toggle a state class so the fox does a little thing.
         // void offsetWidth forces a reflow so the animation restarts on re-trigger.
@@ -498,12 +544,16 @@
         }
 
         // Toggle modal
-        dexFab.addEventListener('click', () => {
-            dexModal.classList.toggle('dex-modal--open');
-        });
+        if (dexFab) {
+            dexFab.addEventListener('click', () => {
+                dexModal.classList.toggle('dex-modal--open');
+            });
+        }
         dexClose.addEventListener('click', () => dexModal.classList.remove('dex-modal--open'));
         document.addEventListener('click', e => {
-            if (!dexModal.contains(e.target) && e.target !== dexFab && !dexFab.contains(e.target))
+            const inFab    = dexFab && (e.target === dexFab || dexFab.contains(e.target));
+            const inTopBar = dexTopBar && dexTopBar.contains(e.target);
+            if (!dexModal.contains(e.target) && !inFab && !inTopBar)
                 dexModal.classList.remove('dex-modal--open');
         });
 
@@ -641,6 +691,15 @@
         dexInput.addEventListener('keydown', e => {
             if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
         });
+
+        // Entry point for the dashboard's top ask bar (and any other in-page
+        // Dex trigger) to open the chat modal and send a message in one go.
+        window.dexAskAndSend = function (text) {
+            if (!text || !text.trim()) return;
+            dexModal.classList.add('dex-modal--open');
+            dexInput.value = text;
+            sendMessage();
+        };
     })();
     </script>
     <script>

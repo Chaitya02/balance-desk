@@ -5,7 +5,8 @@ import resend
 from flask import Blueprint, render_template, request, redirect, url_for, session, flash, current_app
 from werkzeug.security import generate_password_hash, check_password_hash
 from models import db, User
-from utils import login_required
+from routes.admin import home_redirect
+from utils import login_required, CURRENCIES, detect_currency
 
 auth_bp = Blueprint('auth', __name__)
 
@@ -80,13 +81,16 @@ def _send_verification_email(user):
 @auth_bp.route('/register', methods=['GET', 'POST'])
 def register():
     if session.get('user_id'):
-        return redirect(url_for('main.dashboard'))
+        return home_redirect()
 
     if request.method == 'POST':
         name     = ' '.join(request.form.get('name', '').split()).title()
         email    = request.form.get('email', '').strip().lower()
         password = request.form.get('password', '')
         confirm  = request.form.get('confirm_password', '')
+        currency = request.form.get('currency', '')
+        if currency not in CURRENCIES:
+            currency = detect_currency(request)
 
         error = None
         if not name:
@@ -102,13 +106,14 @@ def register():
 
         if error:
             return render_template('register.html', error=error,
-                                   name=name, email=email)
+                                   name=name, email=email, currency=currency)
 
         user = User(
             name=name,
             email=email,
             password_hash=generate_password_hash(password),
             is_verified=False,
+            currency=currency,
         )
         db.session.add(user)
         db.session.commit()
@@ -120,7 +125,7 @@ def register():
 
         return redirect(url_for('auth.verify_notice', email=email))
 
-    return render_template('register.html')
+    return render_template('register.html', currency=detect_currency(request))
 
 
 @auth_bp.route('/verify-notice')
@@ -142,8 +147,9 @@ def verify_email(token):
 
     session.clear()
     session['user_id'] = user.id
+    session['auth_method'] = 'password'
     flash(f'Email verified! Welcome to Balance Desk, {user.name}!', 'success')
-    return redirect(url_for('main.dashboard'))
+    return home_redirect()
 
 
 @auth_bp.route('/resend-verification', methods=['POST'])
@@ -165,7 +171,7 @@ def resend_verification():
 @auth_bp.route('/login', methods=['GET', 'POST'])
 def login():
     if session.get('user_id'):
-        return redirect(url_for('main.dashboard'))
+        return home_redirect()
 
     if request.method == 'POST':
         email    = request.form.get('email', '').strip().lower()
@@ -188,8 +194,9 @@ def login():
 
         session.clear()
         session['user_id'] = user.id
+        session['auth_method'] = 'password'
         flash(f'Welcome back, {user.name}!', 'success')
-        return redirect(url_for('main.dashboard'))
+        return home_redirect()
 
     return render_template('login.html')
 
@@ -244,14 +251,16 @@ def google_callback():
                 google_id=google_id,
                 avatar_url=avatar_url,
                 is_verified=True,
+                currency=detect_currency(request),
             )
             db.session.add(user)
         db.session.commit()
 
     session.clear()
     session['user_id'] = user.id
+    session['auth_method'] = 'google'
     flash(f'Welcome, {user.name}!', 'success')
-    return redirect(url_for('main.dashboard'))
+    return home_redirect()
 
 
 # ------------------------------------------------------------------ #
@@ -274,6 +283,18 @@ def profile():
                 user.name = name
                 db.session.commit()
                 flash('Name updated successfully.', 'success')
+
+        elif action == 'update_currency':
+            currency = request.form.get('currency', '')
+            if currency not in CURRENCIES:
+                flash('Please choose a valid currency.', 'error')
+            else:
+                user.currency = currency
+                # Cached Dex starter chips embed the old symbol — force a regen.
+                user.dex_starters = None
+                user.dex_starters_at = None
+                db.session.commit()
+                flash('Currency updated successfully.', 'success')
 
         elif action == 'change_password':
             current  = request.form.get('current_password', '')

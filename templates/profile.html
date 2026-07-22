@@ -61,8 +61,8 @@
                 </form>
             </div>
 
-            <!-- Appearance -->
-            <div class="profile-card">
+            <!-- Appearance — target of the nav's "Settings" link -->
+            <div class="profile-card" id="settings">
                 <h2 class="profile-card-title">Appearance</h2>
                 <p class="profile-card-hint">Choose how Balance Desk looks on this device. System follows your device setting.</p>
                 <div class="theme-seg" id="themeSeg" role="radiogroup" aria-label="Theme preference">
@@ -79,6 +79,24 @@
                         System
                     </button>
                 </div>
+            </div>
+
+            <!-- Currency -->
+            <div class="profile-card">
+                <h2 class="profile-card-title">Currency</h2>
+                <p class="profile-card-hint">How amounts are displayed across your dashboard, expenses, and Dex. Existing amounts are not converted.</p>
+                <form method="POST" action="{{ url_for('auth.profile') }}">
+                    <input type="hidden" name="action" value="update_currency">
+                    <div class="form-group">
+                        <label for="currency">Display currency</label>
+                        <select id="currency" name="currency" class="form-input">
+                            {% for code, cur in currencies.items() %}
+                            <option value="{{ code }}" {% if code == user.currency %}selected{% endif %}>{{ cur.label }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <button type="submit" class="btn-submit-sm">Save currency</button>
+                </form>
             </div>
 
             <!-- Password -->

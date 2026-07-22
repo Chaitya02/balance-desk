@@ -1,0 +1,49 @@
+{% extends "admin_base.html" %}
+
+{% block title %}Admin Access — Balance Desk{% endblock %}
+
+{% block content %}
+<section class="admin-gate-page">
+    <div class="admin-gate-card">
+
+        <div class="admin-gate-icon" aria-hidden="true">
+            <svg width="26" height="26" viewBox="0 0 24 24" fill="none">
+                <rect x="4" y="10.5" width="16" height="10" rx="2.5"
+                      stroke="currentColor" stroke-width="1.7"/>
+                <path d="M8 10.5V7.5a4 4 0 0 1 8 0v3" stroke="currentColor"
+                      stroke-width="1.7" stroke-linecap="round"/>
+                <circle cx="12" cy="15.5" r="1.6" fill="currentColor"/>
+            </svg>
+        </div>
+
+        <h1 class="admin-gate-title">Admin access</h1>
+
+        {% if not code_sent %}
+        <p class="admin-gate-sub">
+            For security, we'll email a one-time code to
+            <strong>{{ admin_email }}</strong>. Enter it here to open the admin panel.
+        </p>
+        <form method="post" action="{{ url_for('admin.admin_send_code') }}" class="admin-gate-form">
+            <button type="submit" class="btn-primary admin-gate-btn">Email me a code</button>
+        </form>
+
+        {% else %}
+        <p class="admin-gate-sub">
+            We sent a 6-digit code to <strong>{{ admin_email }}</strong>.
+            Enter it below — it expires in 10 minutes.
+        </p>
+        <form method="post" action="{{ url_for('admin.admin') }}" class="admin-gate-form">
+            <input type="text" name="code" inputmode="numeric" pattern="[0-9]*"
+                   maxlength="6" autocomplete="one-time-code" autofocus
+                   class="admin-gate-input" placeholder="000000" aria-label="6-digit code">
+            <button type="submit" class="btn-primary admin-gate-btn">Unlock panel</button>
+        </form>
+        <form method="post" action="{{ url_for('admin.admin_send_code') }}" class="admin-gate-resend">
+            <button type="submit" class="admin-gate-link">Resend code</button>
+        </form>
+        {% endif %}
+
+        <a href="{{ url_for('main.dashboard') }}" class="admin-gate-back">&larr; Back to dashboard</a>
+    </div>
+</section>
+{% endblock %}

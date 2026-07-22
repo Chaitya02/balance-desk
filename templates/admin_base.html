@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Admin — Balance Desk{% endblock %}</title>
+    <script>
+        // Apply saved theme before first paint to avoid a flash of the wrong theme
+        (function () {
+            let pref;
+            try { pref = localStorage.getItem('theme'); } catch (e) {}
+            if (pref !== 'light' && pref !== 'dark') pref = 'system';
+            const resolved = pref === 'system'
+                ? (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light')
+                : pref;
+            document.documentElement.setAttribute('data-theme', resolved);
+            document.documentElement.setAttribute('data-theme-pref', pref);
+        })();
+    </script>
+    <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='favicon.svg') }}">
+    <link rel="shortcut icon" href="{{ url_for('static', filename='favicon.svg') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    {% block head %}{% endblock %}
+</head>
+<body class="admin-shell">
+
+    <nav class="admin-nav">
+        <div class="admin-nav-inner">
+            <a href="{{ url_for('admin.admin') }}" class="admin-nav-brand">
+                <span class="brand-icon">◈</span>
+                <span class="brand-name">Balance Desk</span>
+                <span class="admin-nav-tag">Admin</span>
+            </a>
+
+            <div class="admin-nav-right">
+                {# Navbar links to be added later, per your call #}
+                <button class="theme-toggle" type="button" aria-label="Cycle theme" title="Cycle theme">
+                    <svg class="icon-moon" width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M13.5 9.5A6 6 0 016.5 2.5a6 6 0 107 7z" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/></svg>
+                    <svg class="icon-sun" width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="3.25" stroke="currentColor" stroke-width="1.4"/><path d="M8 1v1.8M8 13.2V15M15 8h-1.8M2.8 8H1M12.95 3.05l-1.27 1.27M4.32 11.68l-1.27 1.27M12.95 12.95l-1.27-1.27M4.32 4.32L3.05 3.05" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
+                    <svg class="icon-system" width="16" height="16" viewBox="0 0 16 16" fill="none"><rect x="1.5" y="2.5" width="13" height="9" rx="1.5" stroke="currentColor" stroke-width="1.4"/><path d="M5.5 14h5M8 11.5V14" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
+                </button>
+                <a href="{{ url_for('auth.logout') }}" class="admin-nav-signout">Sign out</a>
+            </div>
+        </div>
+    </nav>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            <div class="flash-container">
+                {% for category, message in messages %}
+                    <div class="flash flash--{{ category }}">{{ message }}</div>
+                {% endfor %}
+            </div>
+        {% endif %}
+    {% endwith %}
+
+    <main class="admin-main">
+        {% block content %}{% endblock %}
+    </main>
+
+    <script>
+        // Theme toggle (light -> dark -> system), self-contained for the admin shell
+        const themeMedia = window.matchMedia('(prefers-color-scheme: dark)');
+        function themePref() {
+            try { return localStorage.getItem('theme') || 'system'; } catch (e) { return 'system'; }
+        }
+        function setThemePref(pref) {
+            try { localStorage.setItem('theme', pref); } catch (e) {}
+            const resolved = pref === 'system' ? (themeMedia.matches ? 'dark' : 'light') : pref;
+            document.documentElement.setAttribute('data-theme', resolved);
+            document.documentElement.setAttribute('data-theme-pref', pref);
+        }
+        const themeCycle = { light: 'dark', dark: 'system', system: 'light' };
+        document.querySelectorAll('.theme-toggle').forEach(btn => {
+            btn.addEventListener('click', () => setThemePref(themeCycle[themePref()] || 'light'));
+        });
+        themeMedia.addEventListener('change', () => {
+            if (themePref() === 'system') setThemePref('system');
+        });
+    </script>
+    {% block scripts %}{% endblock %}
+</body>
+</html>
